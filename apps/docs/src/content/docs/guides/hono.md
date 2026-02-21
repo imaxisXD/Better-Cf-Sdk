@@ -19,7 +19,7 @@ export const { defineQueue } = createSDK<Env>();
 ```
 
 ```ts
-// src/queues/email.ts
+// src/queues/email.ts (example path)
 import { z } from 'zod';
 import { defineQueue } from '../../better-cf.config';
 
@@ -61,5 +61,5 @@ better-cf dev
 The automation loop handles generated entry + Wrangler queue config updates while your Hono app remains your runtime surface.
 
 <div class="dx-callout">
-  <strong>Keep it simple:</strong> use Hono for HTTP routing and keep queue contract logic in dedicated `src/queues/*` modules.
+  <strong>Keep it simple:</strong> use Hono for HTTP routing and keep queue contract logic in dedicated modules (for example `src/queues/*`, though any folder works).
 </div>

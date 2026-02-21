@@ -85,6 +85,7 @@ export default defineConfig({
               items: [
                 { label: 'Automation CLI', link: '/guides/automation-cli' },
                 { label: 'Env Typing Modes', link: '/guides/env-typing-modes' },
+                { label: 'File Structure', link: '/guides/file-structure' },
                 { label: 'Hono', link: '/guides/hono' },
                 { label: 'Legacy Cloudflare', link: '/guides/legacy-cloudflare' },
                 { label: 'Queue Admin CLI', link: '/guides/queue-admin-cli' }

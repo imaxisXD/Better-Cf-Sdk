@@ -2,8 +2,8 @@
 title: better-cf
 template: doc
 hero:
-  title: better-cf for teams that care about developer experience
-  tagline: Modern, typed, functional-style SDKs over Cloudflare primitives. Queue SDK is live in Alpha, with Workflow and Durable Objects next.
+  title: better-cf
+  tagline: Modern, typed, functional-style SDKs for Cloudflare. 
   actions:
     - text: Start Queue SDK
       link: /getting-started

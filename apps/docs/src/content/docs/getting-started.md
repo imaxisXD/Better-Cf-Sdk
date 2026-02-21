@@ -34,6 +34,8 @@ export const { defineQueue, defineWorker } = createSDK<Env>();
 
 ## 4. Define Your First Queue
 
+You can place this queue file anywhere in your project; `src/queues/*` is just a convention.
+
 ```ts
 import { z } from 'zod';
 import { defineQueue } from './better-cf.config';
@@ -85,6 +87,7 @@ npm run deploy
 
 ## Next Steps
 
+- Understand package internals in [File Structure](/guides/file-structure)
 - Review more patterns in [Cookbook](/examples/cookbook)
 - Compare tradeoffs in [Cloudflare vs better-cf](/comparison/cloudflare-vs-better-cf)
 - Understand boundaries in [Limitations](/limitations)

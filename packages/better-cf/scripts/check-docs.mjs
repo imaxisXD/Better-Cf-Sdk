@@ -15,6 +15,7 @@ const requiredFiles = [
   'apps/docs/src/content/docs/api/testing.md',
   'apps/docs/src/content/docs/guides/automation-cli.md',
   'apps/docs/src/content/docs/guides/env-typing-modes.md',
+  'apps/docs/src/content/docs/guides/file-structure.md',
   'apps/docs/src/content/docs/guides/hono.md',
   'apps/docs/src/content/docs/guides/legacy-cloudflare.md',
   'apps/docs/src/content/docs/guides/queue-admin-cli.md',

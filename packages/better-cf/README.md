@@ -129,4 +129,5 @@ Use native Cloudflare APIs directly where the SDK intentionally does not abstrac
 
 - Site source: `apps/docs`
 - Getting started page: `apps/docs/src/content/docs/getting-started.md`
+- File structure guide: `apps/docs/src/content/docs/guides/file-structure.md`
 - Cookbook page: `apps/docs/src/content/docs/examples/cookbook.md`
