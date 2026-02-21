@@ -9,7 +9,7 @@ const requiredFiles = [
   'apps/docs/src/content/docs/index.md',
   'apps/docs/src/content/docs/why-better-cf.md',
   'apps/docs/src/content/docs/getting-started.md',
-  'apps/docs/src/content/docs/comparison/cloudflare-vs-better-cf.md',
+  'apps/docs/src/content/docs/comparison/cloudflare-vs-better-cf.mdx',
   'apps/docs/src/content/docs/examples/cookbook.md',
   'apps/docs/src/content/docs/api/queue.md',
   'apps/docs/src/content/docs/api/testing.md',

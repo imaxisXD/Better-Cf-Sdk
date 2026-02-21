@@ -1,40 +1,61 @@
 ---
 title: better-cf
-template: splash
+template: doc
 hero:
-  title: Opinionated Cloudflare Queue SDK for teams that care about DX
-  tagline: Typed queue contracts, generated wiring, and cleaner runtime ergonomics over raw Cloudflare queue setup.
+  title: better-cf for teams that care about developer experience
+  tagline: Modern, typed, functional-style SDKs over Cloudflare primitives. Queue SDK is live in Alpha, with Workflow and Durable Objects next.
   actions:
-    - text: Start in 5 Minutes
+    - text: Start Queue SDK
       link: /getting-started
       variant: primary
-    - text: Browse Cookbook
-      link: /examples/cookbook
+    - text: Read the Vision
+      link: /why-better-cf
       variant: secondary
     - text: Compare Approaches
       link: /comparison/cloudflare-vs-better-cf
       variant: minimal
 ---
 
-<div class="dx-grid">
-  <article class="dx-card">
-    <span class="dx-pill">Typed by default</span>
-    <h3>Queue payloads are schemas, not conventions</h3>
-    <p>Define queues with Zod and get typed producer + consumer flows without hand-written runtime glue.</p>
+## SDK Catalog
+
+<div class="sdk-catalog-grid">
+  <article class="sdk-card">
+    <div class="sdk-card-header">
+      <h3>Queue SDK</h3>
+      <span class="sl-badge sdk-badge-alpha">Alpha</span>
+    </div>
+    <p>Typed queue contracts, generated wiring, and a cleaner local workflow for Cloudflare Queues.</p>
+    <a class="sdk-card-cta" href="/getting-started">Open docs</a>
   </article>
-  <article class="dx-card">
-    <span class="dx-pill">Automation loop</span>
-    <h3>Queue wiring is generated</h3>
-    <p>`better-cf dev` scans queue definitions, generates entry files, patches Wrangler config, and keeps local dev in sync.</p>
+  <article class="sdk-card sdk-card--coming-soon">
+    <div class="sdk-card-header">
+      <h3>Workflow SDK</h3>
+      <span class="sl-badge sdk-badge-coming-soon">Coming Soon</span>
+    </div>
+    <p>A structured workflow SDK that applies the same DX-first standards to long-running orchestration on Cloudflare.</p>
+    <span class="sdk-card-cta" aria-disabled="true">Not available yet</span>
   </article>
-  <article class="dx-card">
-    <span class="dx-pill">Pragmatic control</span>
-    <h3>Opinionated, not limiting</h3>
-    <p>You still keep direct Cloudflare primitives available while using a higher-level SDK shape that is easier to maintain.</p>
+  <article class="sdk-card sdk-card--coming-soon">
+    <div class="sdk-card-header">
+      <h3>Durable Objects SDK</h3>
+      <span class="sl-badge sdk-badge-coming-soon">Coming Soon</span>
+    </div>
+    <p>Functional, typed patterns for stateful edge coordination without pushing teams back into boilerplate-heavy setup code.</p>
+    <span class="sdk-card-cta" aria-disabled="true">Not available yet</span>
   </article>
 </div>
 
-## What You Can Do Quickly
+<div class="dx-callout">
+  <strong>Design benchmark:</strong> this suite follows the modern DX bar set by tools like Convex, Vercel, Clerk, Upstash, and TanStack Query: typed APIs, obvious defaults, and a workflow that scales with teams.
+</div>
+
+## Why This Direction
+
+Cloudflare primitives are powerful, but the day-to-day integration style still feels closer to an older class-era mindset: lots of manual wiring, scattered config, and repeated ceremony.
+
+`better-cf` takes the same shift React went through when functional patterns became the default: less ceremony, clearer composition, and APIs optimized for iteration speed.
+
+## What You Can Do Today with Queue SDK (Alpha)
 
 <div class="dx-grid">
   <article class="dx-card">
@@ -47,14 +68,14 @@ hero:
   </article>
   <article class="dx-card">
     <h4>HTTP pull consumers</h4>
-    <p>Configure `consumer.type = "http_pull"` in one place and let mapping to Wrangler stay consistent.</p>
+    <p>Configure <code>consumer.type = "http_pull"</code> in one place and let mapping to Wrangler stay consistent.</p>
   </article>
   <article class="dx-card">
     <h4>Fast tests</h4>
-    <p>Use `testQueue` to run queue handlers without Cloudflare runtime bootstrap in unit tests.</p>
+    <p>Use <code>testQueue</code> to run queue handlers without Cloudflare runtime bootstrap in unit tests.</p>
   </article>
 </div>
 
 <div class="dx-callout">
-  <strong>New to the project?</strong> Start with <a href="/why-better-cf">Why better-cf</a>, then follow <a href="/getting-started">Getting Started</a>, and use the <a href="/examples/cookbook">Cookbook</a> as your implementation reference.
+  <strong>New to the suite?</strong> Start with <a href="/why-better-cf">Why better-cf</a>, then follow <a href="/getting-started">Queue SDK Getting Started</a>, and use the <a href="/examples/cookbook">Queue Cookbook</a> as your implementation reference.
 </div>

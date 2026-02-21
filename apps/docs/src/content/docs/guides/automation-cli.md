@@ -1,7 +1,9 @@
 ---
 title: Automation CLI
-description: How the better-cf automation loop works in dev, generate, and deploy flows.
+description: How the Queue SDK (Alpha) automation loop works in dev, generate, and deploy flows.
 ---
+
+This guide documents automation behavior for Queue SDK (Alpha), the currently shipped SDK in the suite.
 
 The CLI is built around one idea: keep queue wiring and Wrangler config synchronized automatically.
 

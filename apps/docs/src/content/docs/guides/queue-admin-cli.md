@@ -1,9 +1,9 @@
 ---
 title: Queue Admin CLI
-description: Structured queue and subscription admin wrappers over Wrangler commands.
+description: Queue SDK (Alpha) structured queue and subscription admin wrappers over Wrangler commands.
 ---
 
-`better-cf` provides queue/subscription admin commands that wrap Wrangler operations with consistent validation and error shape.
+Queue SDK (Alpha) provides queue/subscription admin commands that wrap Wrangler operations with consistent validation and error shape.
 
 ## Command Groups
 

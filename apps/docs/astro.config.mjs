@@ -6,54 +6,98 @@ export default defineConfig({
   integrations: [
     starlight({
       title: 'better-cf',
-      description: 'Opinionated Cloudflare Queue SDK + CLI focused on modern DX',
+      description:
+        'Modern Cloudflare SDK suite from better-cf focused on functional API design, typed contracts, and a better developer workflow.',
       customCss: ['/src/styles/theme.css'],
+      components: {
+        Sidebar: './src/components/ConditionalSidebar.astro'
+      },
       sidebar: [
         {
-          label: 'Start Here',
+          label: 'Why better-cf',
           items: [
             { label: 'Why better-cf', link: '/why-better-cf' },
-            { label: 'Getting Started', link: '/getting-started' },
-            { label: 'Limitations', link: '/limitations' }
+            { label: 'Roadmap', link: '/reference/roadmap' }
           ]
         },
         {
-          label: 'Examples',
-          items: [{ label: 'Cookbook', link: '/examples/cookbook' }]
-        },
-        {
-          label: 'Comparison',
+          label: 'SDK Catalog',
           items: [
             {
-              label: 'Cloudflare vs better-cf',
-              link: '/comparison/cloudflare-vs-better-cf'
+              label: 'Queue SDK',
+              link: '/getting-started',
+              badge: { text: 'Alpha', class: 'sdk-badge-alpha' }
+            },
+            {
+              label: 'Workflow SDK',
+              link: '#',
+              badge: { text: 'Coming Soon', class: 'sdk-badge-coming-soon' },
+              attrs: {
+                class: 'sdk-link--coming-soon',
+                'aria-disabled': true,
+                tabindex: -1
+              }
+            },
+            {
+              label: 'Durable Objects SDK',
+              link: '#',
+              badge: { text: 'Coming Soon', class: 'sdk-badge-coming-soon' },
+              attrs: {
+                class: 'sdk-link--coming-soon',
+                'aria-disabled': true,
+                tabindex: -1
+              }
             }
           ]
         },
         {
-          label: 'API',
+          label: 'Queue SDK Docs',
           items: [
-            { label: 'Queue', link: '/api/queue' },
-            { label: 'Testing', link: '/api/testing' }
-          ]
-        },
-        {
-          label: 'Guides',
-          items: [
-            { label: 'Automation CLI', link: '/guides/automation-cli' },
-            { label: 'Env Typing Modes', link: '/guides/env-typing-modes' },
-            { label: 'Hono', link: '/guides/hono' },
-            { label: 'Legacy Cloudflare', link: '/guides/legacy-cloudflare' },
-            { label: 'Queue Admin CLI', link: '/guides/queue-admin-cli' }
-          ]
-        },
-        {
-          label: 'Reference',
-          items: [
-            { label: 'Wrangler Mapping', link: '/reference/wrangler-mapping' },
-            { label: 'Errors', link: '/reference/errors' },
-            { label: 'Compatibility', link: '/reference/compatibility' },
-            { label: 'Roadmap', link: '/reference/roadmap' }
+            {
+              label: 'Start Here',
+              items: [
+                { label: 'Getting Started', link: '/getting-started' },
+                { label: 'Limitations', link: '/limitations' }
+              ]
+            },
+            {
+              label: 'Examples',
+              items: [{ label: 'Queue Cookbook', link: '/examples/cookbook' }]
+            },
+            {
+              label: 'Comparison',
+              items: [
+                {
+                  label: 'Cloudflare vs better-cf',
+                  link: '/comparison/cloudflare-vs-better-cf'
+                }
+              ]
+            },
+            {
+              label: 'API',
+              items: [
+                { label: 'Queue SDK API', link: '/api/queue' },
+                { label: 'Testing API', link: '/api/testing' }
+              ]
+            },
+            {
+              label: 'Guides',
+              items: [
+                { label: 'Automation CLI', link: '/guides/automation-cli' },
+                { label: 'Env Typing Modes', link: '/guides/env-typing-modes' },
+                { label: 'Hono', link: '/guides/hono' },
+                { label: 'Legacy Cloudflare', link: '/guides/legacy-cloudflare' },
+                { label: 'Queue Admin CLI', link: '/guides/queue-admin-cli' }
+              ]
+            },
+            {
+              label: 'Reference',
+              items: [
+                { label: 'Wrangler Mapping', link: '/reference/wrangler-mapping' },
+                { label: 'Error Reference', link: '/reference/errors' },
+                { label: 'Compatibility', link: '/reference/compatibility' }
+              ]
+            }
           ]
         }
       ]

@@ -1,9 +1,9 @@
 ---
 title: Hono Guide
-description: Run Hono with better-cf queue definitions and generated queue wiring.
+description: Run Hono with Queue SDK (Alpha) definitions and generated queue wiring.
 ---
 
-Hono works with `better-cf` as long as queue definitions are discoverable and the generated entry is used.
+Hono works with Queue SDK (Alpha) as long as queue definitions are discoverable and the generated entry is used.
 
 ## 1. Define SDK and Queue
 
@@ -25,7 +25,9 @@ import { defineQueue } from '../../better-cf.config';
 
 export const emailQueue = defineQueue({
   message: z.object({ to: z.string().email() }),
-  process: async () => {}
+  process: async (ctx, message) => {
+    console.log(ctx.message.id, message.to);
+  }
 });
 ```
 

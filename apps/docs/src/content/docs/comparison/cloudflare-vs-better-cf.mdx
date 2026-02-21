@@ -1,0 +1,365 @@
+---
+title: Cloudflare vs better-cf
+description: A factual comparison of native Cloudflare queue workflows and the Queue SDK (Alpha) from the better-cf SDK suite.
+---
+
+import { Code } from '@astrojs/starlight/components';
+
+This page compares two ways to build queue-driven Workers today:
+
+- **Cloudflare path**: raw Wrangler + Cloudflare queue docs workflow
+- **Queue SDK path (`better-cf/queue`)**: opinionated SDK + automation CLI over those primitives
+
+Queue SDK is the first shipped part of the broader better-cf SDK suite. Workflow SDK and Durable Objects SDK are visible in the docs catalog and marked Coming Soon.
+
+The goal is not to replace Cloudflare concepts. The goal is to reduce manual wiring and improve team-level DX with a functional, composable SDK style.
+
+## Table A: Workflow and DX
+
+<div class="dx-table-wrap">
+  <table class="comparison-table">
+    <thead>
+      <tr>
+        <th>Concern</th>
+        <th>Cloudflare flow</th>
+        <th>better-cf flow</th>
+        <th>Why it matters</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td data-label="Concern"><strong>Queue contract definition</strong></td>
+        <td data-label="Cloudflare flow">You define payload shape by convention or custom runtime validation in handler code.</td>
+        <td data-label="better-cf flow">`defineQueue({ message: z.object(...) })` establishes contract and typed send/process usage.</td>
+        <td data-label="Why it matters">Teams get one obvious source of truth for payload structure.</td>
+      </tr>
+      <tr>
+        <td data-label="Concern"><strong>Entry and binding wiring</strong></td>
+        <td data-label="Cloudflare flow">Manual entry exports + wrangler consumer sections maintained by hand.</td>
+        <td data-label="better-cf flow">`better-cf dev/generate` scans queue exports, generates entry, and patches supported Wrangler configs.</td>
+        <td data-label="Why it matters">Reduces config drift and repetitive maintenance.</td>
+      </tr>
+      <tr>
+        <td data-label="Concern"><strong>Local dev loop</strong></td>
+        <td data-label="Cloudflare flow">You orchestrate your own watch/rebuild/update cycle.</td>
+        <td data-label="better-cf flow">Single automation loop for scan → validate → generate → patch → run/restart.</td>
+        <td data-label="Why it matters">One command for the common daily workflow.</td>
+      </tr>
+      <tr>
+        <td data-label="Concern"><strong>Error messaging shape</strong></td>
+        <td data-label="Cloudflare flow">Errors vary by command/tooling context.</td>
+        <td data-label="better-cf flow">CLI errors are normalized (`code`, `summary`, `details`, `hint`, optional docs URL).</td>
+        <td data-label="Why it matters">Faster triage and easier onboarding.</td>
+      </tr>
+      <tr>
+        <td data-label="Concern"><strong>Testing queue handlers</strong></td>
+        <td data-label="Cloudflare flow">You build custom harnesses or rely on broader integration setup.</td>
+        <td data-label="better-cf flow">`testQueue` runs queue consumption logic directly in unit tests.</td>
+        <td data-label="Why it matters">Shorter feedback loops for queue logic.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+## Table B: API Surface Comparison
+
+<div class="dx-table-wrap">
+  <table class="comparison-table">
+    <thead>
+      <tr>
+        <th>Capability</th>
+        <th>Cloudflare primitive</th>
+        <th>better-cf API</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td data-label="Capability"><strong>SDK bootstrap</strong></td>
+        <td data-label="Cloudflare primitive">Direct Worker runtime + queue bindings</td>
+        <td data-label="better-cf API"><code>createSDK&lt;Env&gt;()</code></td>
+        <td data-label="Notes">Returns typed `defineQueue` and `defineWorker` helpers.</td>
+      </tr>
+      <tr>
+        <td data-label="Capability"><strong>Queue definition</strong></td>
+        <td data-label="Cloudflare primitive">Queue handler + custom schema and branching</td>
+        <td data-label="better-cf API"><code>defineQueue(&#123; message, process | processBatch, ... &#125;)</code></td>
+        <td data-label="Notes">Supports push mode, pull config mode, and multi-job mode.</td>
+      </tr>
+      <tr>
+        <td data-label="Capability"><strong>Producer send</strong></td>
+        <td data-label="Cloudflare primitive"><code>env.MY_QUEUE.send/sendBatch</code></td>
+        <td data-label="better-cf API"><code>queue.send</code> / <code>queue.sendBatch</code></td>
+        <td data-label="Notes">Supports typed payload plus delay/content-type options.</td>
+      </tr>
+      <tr>
+        <td data-label="Capability"><strong>Worker wrapper</strong></td>
+        <td data-label="Cloudflare primitive">Manual fetch/scheduled export wiring</td>
+        <td data-label="better-cf API"><code>defineWorker(&#123; fetch, scheduled? &#125;)</code></td>
+        <td data-label="Notes">Typed `ctx.env` with generated bindings included.</td>
+      </tr>
+      <tr>
+        <td data-label="Capability"><strong>Queue testing</strong></td>
+        <td data-label="Cloudflare primitive">Custom mocks/harnesses</td>
+        <td data-label="better-cf API"><code>testQueue(handle, options)</code></td>
+        <td data-label="Notes">Returns acked/retried payloads for assertions.</td>
+      </tr>
+      <tr>
+        <td data-label="Capability"><strong>Queue admin ops</strong></td>
+        <td data-label="Cloudflare primitive">Wrangler queue/subscription commands</td>
+        <td data-label="better-cf API"><code>better-cf queue:* / subscription:*</code></td>
+        <td data-label="Notes">Structured wrapper commands over Wrangler operations.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="dx-callout">
+  <strong>Practical default:</strong> Use Queue SDK (Alpha) for app-level queue development and keep native Cloudflare commands available for edge cases.
+</div>
+
+## Code Comparison: Structure and Patterns
+
+`better-cf` compresses repetitive queue plumbing into a smaller, repeatable surface, so teams spend less time maintaining glue code and more time shipping queue behavior.
+
+### Structure first
+
+<div class="code-compare-section">
+  <div class="code-compare-grid">
+    <article class="code-compare-card code-compare-card--cloudflare">
+      <h4>Cloudflare (common manual structure)</h4>
+      <p class="code-compare-meta">Schema helpers, queue handler wiring, and Wrangler mapping are maintained across multiple touchpoints.</p>
+      <Code
+        lang="txt"
+        code={`.
+|- src/
+|  |- queues/
+|  |  \\- signup.ts
+|  \\- workers/
+|     \\- queue-handler.ts
+|- worker.ts
+|- wrangler.toml
+\\- tests/
+   \\- queue-harness.test.ts`}
+      />
+    </article>
+    <article class="code-compare-card code-compare-card--bettercf">
+      <h4>better-cf structure</h4>
+      <p class="code-compare-meta">Queue contract, producer API, and consumer logic stay centered in one queue definition with generated wiring.</p>
+      <Code
+        lang="txt"
+        code={`.
+|- better-cf.config.ts
+|- src/
+|  \\- queues/
+|     \\- signup.ts
+|- worker.ts
+|- .better-cf/
+|  \\- entry.ts
+\\- tests/
+   \\- signupQueue.test.ts`}
+      />
+    </article>
+  </div>
+</div>
+
+### Contract + Producer Flow
+
+<div class="code-compare-section">
+  <div class="code-compare-grid">
+    <article class="code-compare-card code-compare-card--cloudflare">
+      <h4>Cloudflare</h4>
+      <p class="code-compare-meta">Common pattern: define schema utilities and manually keep producer types aligned.</p>
+      <Code
+        lang="ts"
+        code={`import { z } from 'zod';
+
+const signupSchema = z.object({
+  email: z.string().email(),
+  userId: z.string()
+});
+
+type SignupMessage = z.infer<typeof signupSchema>;
+
+type Env = {
+  QUEUE_SIGNUP: Queue<SignupMessage>;
+};
+
+export async function enqueueSignup(env: Env, input: unknown) {
+  const payload = signupSchema.parse(input);
+  await env.QUEUE_SIGNUP.send(payload, { contentType: 'json' });
+}`}
+      />
+    </article>
+    <article class="code-compare-card code-compare-card--bettercf">
+      <h4>better-cf</h4>
+      <p class="code-compare-meta">Contract and producer API come from one `defineQueue` declaration.</p>
+      <Code
+        lang="ts"
+        code={`import { createSDK } from 'better-cf/queue';
+import { z } from 'zod';
+
+type Env = { QUEUE_SIGNUP: Queue };
+const { defineQueue } = createSDK<Env>();
+
+export const signupQueue = defineQueue({
+  message: z.object({
+    email: z.string().email(),
+    userId: z.string()
+  }),
+  process: async (ctx, message) => {
+    console.log(ctx.message.id, message.email, message.userId);
+  }
+});
+
+await signupQueue.send(
+  { env },
+  { email: 'dev@example.com', userId: 'u_123' },
+  { contentType: 'json' }
+);`}
+      />
+    </article>
+  </div>
+  <p class="code-compare-delta"><strong>DX delta:</strong> `better-cf` keeps schema, typed producer calls, and consumer contract in one place instead of split helper layers.</p>
+</div>
+
+### Consumer Wiring + Worker Entry
+
+<div class="code-compare-section">
+  <div class="code-compare-grid">
+    <article class="code-compare-card code-compare-card--cloudflare">
+      <h4>Cloudflare</h4>
+      <p class="code-compare-meta">Common manual flow: parse each message, call domain logic, and manage `ack/retry` in worker exports.</p>
+      <Code
+        lang="ts"
+        code={`import { signupSchema, handleSignup } from './src/queues/signup';
+
+type Env = { QUEUE_SIGNUP: Queue };
+
+export default {
+  async fetch() {
+    return new Response('queue-ready');
+  },
+
+  async queue(batch: MessageBatch<unknown>, env: Env) {
+    for (const message of batch.messages) {
+      const parsed = signupSchema.safeParse(message.body);
+
+      if (!parsed.success) {
+        message.retry();
+        continue;
+      }
+
+      try {
+        await handleSignup(env, parsed.data);
+        message.ack();
+      } catch {
+        message.retry();
+      }
+    }
+  }
+};`}
+      />
+    </article>
+    <article class="code-compare-card code-compare-card--bettercf">
+      <h4>better-cf</h4>
+      <p class="code-compare-meta">Queue behavior lives in `defineQueue`; worker entry remains focused on HTTP/scheduled handlers.</p>
+      <Code
+        lang="ts"
+        code={`import { z } from 'zod';
+import { defineQueue, defineWorker } from './better-cf.config';
+
+export const signupQueue = defineQueue({
+  message: z.object({
+    email: z.string().email(),
+    userId: z.string()
+  }),
+  retry: 3,
+  retryDelay: '30s',
+  process: async ({ env }, message) => {
+    await handleSignup(env, message);
+  },
+  onFailure: async (ctx, message, error) => {
+    console.error('signup failed', message, error.message);
+  }
+});
+
+export default defineWorker({
+  async fetch() {
+    return new Response('queue-ready');
+  }
+});
+
+// better-cf dev/generate keeps entry + Wrangler wiring in sync`}
+      />
+    </article>
+  </div>
+  <p class="code-compare-delta"><strong>DX delta:</strong> `better-cf` removes manual queue export and `ack/retry` boilerplate from worker entry and centralizes queue behavior in queue definitions.</p>
+</div>
+
+### Testing Queue Logic
+
+<div class="code-compare-section">
+  <div class="code-compare-grid">
+    <article class="code-compare-card code-compare-card--cloudflare">
+      <h4>Cloudflare</h4>
+      <p class="code-compare-meta">Common tests require custom `MessageBatch` stubs for each queue behavior path.</p>
+      <Code
+        lang="ts"
+        code={`import { describe, expect, it, vi } from 'vitest';
+import worker from '../worker';
+
+describe('signup queue', () => {
+  it('retries invalid payload', async () => {
+    const ack = vi.fn();
+    const retry = vi.fn();
+
+    const batch = {
+      queue: 'QUEUE_SIGNUP',
+      messages: [
+        {
+          id: 'msg-1',
+          timestamp: new Date(),
+          body: { email: 'bad', userId: 'u_1' },
+          attempts: 1,
+          ack,
+          retry
+        }
+      ],
+      ackAll: vi.fn(),
+      retryAll: vi.fn()
+    } satisfies MessageBatch<unknown>;
+
+    await worker.queue?.(batch, { QUEUE_SIGNUP: {} as Queue }, {} as ExecutionContext);
+
+    expect(retry).toHaveBeenCalledTimes(1);
+    expect(ack).not.toHaveBeenCalled();
+  });
+});`}
+      />
+    </article>
+    <article class="code-compare-card code-compare-card--bettercf">
+      <h4>better-cf</h4>
+      <p class="code-compare-meta">`testQueue` directly executes queue handlers and returns deterministic ack/retry assertions.</p>
+      <Code
+        lang="ts"
+        code={`import { describe, expect, it } from 'vitest';
+import { testQueue } from 'better-cf/testing';
+import { signupQueue } from '../src/queues/signup';
+
+describe('signup queue', () => {
+  it('acks valid payload', async () => {
+    const result = await testQueue(signupQueue, {
+      env: { QUEUE_SIGNUP: {} as Queue },
+      message: { email: 'dev@example.com', userId: 'u_123' }
+    });
+
+    expect(result.acked).toEqual([{ email: 'dev@example.com', userId: 'u_123' }]);
+    expect(result.retried).toEqual([]);
+  });
+});`}
+      />
+    </article>
+  </div>
+  <p class="code-compare-delta"><strong>DX delta:</strong> `better-cf` ships a purpose-built queue test harness, so teams avoid repeating custom runtime stubs for each test case.</p>
+</div>

@@ -1,0 +1,23 @@
+---
+import DefaultSidebar from '@astrojs/starlight/components/Sidebar.astro';
+
+const props = Astro.props;
+
+const currentSlug = typeof props.slug === 'string' ? props.slug : '';
+const suiteModeSlugs = new Set(['', 'why-better-cf', 'reference/roadmap']);
+const suiteMode = suiteModeSlugs.has(currentSlug);
+
+const suiteGroupLabels = new Set(['Why better-cf', 'SDK Catalog']);
+const queueGroupLabels = new Set(['Queue SDK Docs']);
+
+const originalSidebar = Array.isArray(props.sidebar) ? props.sidebar : [];
+const allowedGroupLabels = suiteMode ? suiteGroupLabels : queueGroupLabels;
+
+const filteredSidebar = originalSidebar.filter(
+  (entry) => entry?.type === 'group' && allowedGroupLabels.has(entry.label)
+);
+
+const sidebar = filteredSidebar.length > 0 ? filteredSidebar : originalSidebar;
+---
+
+<DefaultSidebar {...props} sidebar={sidebar} />

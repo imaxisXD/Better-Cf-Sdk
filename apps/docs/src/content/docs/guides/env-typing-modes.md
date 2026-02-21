@@ -1,9 +1,9 @@
 ---
 title: Env Typing Modes
-description: Choose between generated auto-env inference and explicit app-owned Env typing.
+description: Choose between generated auto-env inference and explicit app-owned Env typing in Queue SDK (Alpha).
 ---
 
-`better-cf` supports two ways to type `ctx.env`.
+Queue SDK (Alpha) supports two ways to type `ctx.env`.
 
 ## Auto Mode (Default)
 

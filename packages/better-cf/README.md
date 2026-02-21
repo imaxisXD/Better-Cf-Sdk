@@ -57,8 +57,8 @@ const { defineQueue, defineWorker } = createSDK<Env>();
 
 export const signupQueue = defineQueue({
   message: z.object({ email: z.string().email() }),
-  process: async (_ctx, msg) => {
-    console.log(msg.email);
+  process: async (ctx, msg) => {
+    console.log(ctx.message.id, msg.email);
   },
   retry: 3,
   retryDelay: '30s'
@@ -77,7 +77,8 @@ export default defineWorker({
 const auditQueue = defineQueue({
   message: z.object({ action: z.string() }),
   batch: { maxSize: 10, timeout: '30s', maxConcurrency: 2 },
-  processBatch: async (ctx) => {
+  processBatch: async (ctx, messages) => {
+    console.log(messages.length, ctx.batch.queue);
     ctx.batch.ackAll();
   }
 });
@@ -105,7 +106,7 @@ expect(result.acked).toHaveLength(1);
 | Local dev orchestration | Team-managed scripts | One `better-cf dev` loop |
 | Queue test harness | Custom mocks/harnesses | `testQueue` helper |
 
-Detailed comparison: `/apps/docs/src/content/docs/comparison/cloudflare-vs-better-cf.md`
+Detailed comparison: `/apps/docs/src/content/docs/comparison/cloudflare-vs-better-cf.mdx`
 
 ## Limitations
 

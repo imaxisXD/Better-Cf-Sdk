@@ -1,7 +1,9 @@
 ---
-title: Getting Started
-description: Ship your first queue with typed contracts and generated wiring.
+title: Queue SDK Getting Started
+description: Queue SDK (Alpha) quickstart for shipping your first typed queue with generated wiring.
 ---
+
+Queue SDK is currently in Alpha and is the first available package in the better-cf SDK suite.
 
 ## 1. Install
 
@@ -43,8 +45,8 @@ export const signupQueue = defineQueue({
   }),
   retry: 3,
   retryDelay: '30s',
-  process: async (_ctx, msg) => {
-    console.log('processing signup', msg.email, msg.userId);
+  process: async (ctx, msg) => {
+    console.log('processing signup', ctx.message.id, msg.email, msg.userId);
   }
 });
 ```

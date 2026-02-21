@@ -1,7 +1,9 @@
 ---
-title: Testing API
-description: Run queue handlers in tests without Cloudflare runtime bootstrap.
+title: Queue SDK Testing API
+description: Queue SDK (Alpha) testing helpers for running queue handlers without Cloudflare runtime bootstrap.
 ---
+
+This page covers the Queue SDK (Alpha) testing surface in the better-cf SDK suite.
 
 Import from `better-cf/testing`.
 

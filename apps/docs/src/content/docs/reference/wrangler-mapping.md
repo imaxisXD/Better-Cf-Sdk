@@ -1,9 +1,9 @@
 ---
 title: Wrangler Mapping
-description: How better-cf queue config maps to Wrangler queue producers/consumers.
+description: How Queue SDK (Alpha) config maps to Wrangler queue producers and consumers.
 ---
 
-`better-cf` generates queue sections in supported Wrangler configs from discovered queue definitions.
+Queue SDK (Alpha) generates queue sections in supported Wrangler configs from discovered queue definitions.
 
 ## Producer Mapping
 

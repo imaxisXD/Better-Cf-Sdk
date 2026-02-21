@@ -1,51 +1,72 @@
 ---
 title: Why better-cf
-description: Why this opinionated SDK exists and when to choose it over native Cloudflare queue wiring.
+description: Why this SDK suite exists, why Queue SDK ships first in Alpha, and how the functional-style DX model guides the roadmap.
 ---
 
-## Why This SDK Exists
+## Why This Suite Exists
 
-Cloudflare Queues are powerful, but production teams usually end up rebuilding the same scaffolding:
+Cloudflare gives strong primitives. The gap is not capability, it is developer workflow.
 
-- payload contract validation
-- queue binding plumbing across worker entrypoints
-- wrangler queue consumer mapping drift
-- repetitive error shapes around queue workflows
+Across teams, we repeatedly saw the same friction:
 
-`better-cf` exists to make those defaults first-class and repeatable.
+- payload contracts enforced by convention instead of first-class typed APIs
+- queue and worker wiring duplicated across entrypoints and config files
+- manual Wrangler synchronization that drifts over time
+- inconsistent error and test harness patterns across services
+
+better-cf exists to make those defaults systematic, not ad hoc.
+
+## The Product Thesis
+
+This is the same pattern shift React went through when functional composition won over class-heavy patterns:
+
+- less ceremony per feature
+- clearer composition boundaries
+- tighter feedback loops for everyday development
+
+Cloudflare remains the runtime foundation. The SDK layer focuses on modern functional ergonomics on top.
+
+## What "Modern DX" Means Here
+
+The bar is set by SDKs and platforms like Convex, Vercel, Clerk, Upstash, and TanStack Query:
+
+- typed APIs as the default, not optional add-ons
+- predictable automation loops for daily work
+- opinionated conventions that reduce integration drift
+- escape hatches when teams need direct primitive control
+
+## Current Scope and Status
+
+- **Queue SDK**: Alpha and usable now
+- **Workflow SDK**: Coming Soon
+- **Durable Objects SDK**: Coming Soon
+
+Queue SDK ships first because it solves high-frequency team pain today while establishing architecture patterns reused by future SDKs.
 
 ## Design Principles
 
+### Functional API shape first
+
+Prefer composable helpers (`createSDK`, `defineQueue`, `defineWorker`) over broad class surfaces and lifecycle-heavy wiring.
+
 ### Typed by default
 
-Define queue messages with Zod and keep type information at the producer and consumer boundaries.
+Contracts should stay close to business logic and remain consistent from producer to consumer to tests.
 
-### Less manual wiring
+### Automation over manual glue
 
-Queue discovery + generated entry wrappers reduce copy/paste infrastructure code.
+Discovery, generation, and Wrangler mapping should be automated where they are deterministic.
 
-### Safer defaults
+### Opinionated, not closed
 
-Configuration validation catches unsupported combinations early (for example, `http_pull` with worker processing handlers).
-
-### DX over ceremony
-
-The API surface is intentionally compact (`createSDK`, `defineQueue`, `defineWorker`, `testQueue`) so teams can onboard faster.
-
-## What Opinionated Means Here
-
-`better-cf` chooses conventions to avoid common sources of drift, but still maps to Cloudflare primitives.
-
-- You can still reason in Wrangler terms.
-- The SDK does not hide Cloudflare concepts.
-- When native access is needed, you can still use Cloudflare APIs directly.
+Use conventions to remove drift, while keeping direct Cloudflare primitives available for advanced needs.
 
 ## When To Use Native Cloudflare Directly
 
-Choose native Cloudflare queue workflows if you need:
+Choose native Cloudflare APIs directly when you need:
 
-- custom runtime behavior outside the SDK’s supported queue model
-- direct integration with APIs not wrapped by this package
-- a minimal abstraction surface for one-off scripts
+- runtime behavior outside the currently supported SDK surface
+- direct integration with Cloudflare features not yet covered by the suite
+- one-off scripts where SDK abstraction is unnecessary
 
-For most app teams, the default tradeoff is: native primitives underneath, with a friendlier and more consistent day-to-day developer experience on top.
+For app teams shipping production workflows, the default tradeoff stays the same: Cloudflare primitives underneath, modern DX on top.

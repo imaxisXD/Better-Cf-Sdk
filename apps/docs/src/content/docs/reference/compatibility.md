@@ -1,7 +1,9 @@
 ---
 title: Compatibility
-description: Runtime, tooling, and config compatibility matrix for better-cf.
+description: Runtime, tooling, and config compatibility matrix for Queue SDK (Alpha).
 ---
+
+This compatibility matrix applies to Queue SDK (Alpha), the currently shipped package in the better-cf SDK suite.
 
 ## Supported Versions
 

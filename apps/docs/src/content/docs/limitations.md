@@ -1,7 +1,9 @@
 ---
 title: Limitations
-description: Current boundaries, known gaps, and when native Cloudflare is a better fit.
+description: Queue SDK (Alpha) boundaries, known gaps, and when native Cloudflare is a better fit.
 ---
+
+This page documents current limitations for Queue SDK (Alpha), the first available package in the better-cf SDK suite.
 
 ## Not Supported
 

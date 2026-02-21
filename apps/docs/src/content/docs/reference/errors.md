@@ -1,9 +1,9 @@
 ---
 title: Error Reference
-description: CLI error payload shape and common error codes.
+description: Queue SDK (Alpha) CLI error payload shape and common error codes.
 ---
 
-`better-cf` CLI errors use a structured model to make failures actionable.
+Queue SDK (Alpha) CLI errors use a structured model to make failures actionable.
 
 ## Error Payload Shape
 

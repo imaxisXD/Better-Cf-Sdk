@@ -1,9 +1,9 @@
 ---
 title: Legacy Cloudflare Guide
-description: Compatibility mode for service-worker style exports.
+description: Queue SDK (Alpha) compatibility mode for service-worker style exports.
 ---
 
-`better-cf` is module-worker first. Legacy service-worker support exists only as a compatibility bridge.
+Queue SDK (Alpha) is module-worker first. Legacy service-worker support exists only as a compatibility bridge.
 
 ## Enable Compatibility Mode
 

@@ -1,7 +1,9 @@
 ---
-title: Queue API
-description: Runtime API surface for creating queues, workers, and typed producer calls.
+title: Queue SDK API
+description: Queue SDK (Alpha) runtime API for creating queues, workers, and typed producer calls.
 ---
+
+Queue SDK is the currently shipped Alpha package in the better-cf SDK suite.
 
 ## Canonical Imports
 
@@ -33,8 +35,8 @@ const signupQueue = defineQueue({
   process: async (ctx, message) => {
     console.log(ctx.message.id, message.email);
   },
-  onFailure: async (_ctx, _message, error) => {
-    console.error(error.message);
+  onFailure: async (ctx, message, error) => {
+    console.error(error.message, message);
   }
 });
 ```
@@ -76,11 +78,15 @@ const jobsQueue = defineQueue({
   retry: 2,
   signup: {
     message: z.object({ email: z.string().email() }),
-    process: async () => {}
+    process: async (ctx, message) => {
+      console.log(ctx.message.id, message.email);
+    }
   },
   invoice: {
     message: z.object({ amount: z.number() }),
-    process: async () => {}
+    process: async (ctx, message) => {
+      console.log(ctx.message.id, message.amount);
+    }
   }
 });
 ```
