@@ -1,0 +1,25 @@
+{
+  "name": "better-cf-monorepo",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "npm run build -w better-cf",
+    "lint": "npm run lint -w better-cf",
+    "test": "npm run test -w better-cf",
+    "test:types": "npm run test:types -w better-cf",
+    "test:e2e": "npm run test:e2e -w better-cf",
+    "check:docs": "npm run check:docs -w better-cf",
+    "check": "npm run check -w better-cf",
+    "docs:dev": "npm run dev -w @better-cf/docs",
+    "docs:build": "npm run build -w @better-cf/docs",
+    "release:version": "changeset version",
+    "release:publish": "npm run build -w better-cf && npm publish -w better-cf --access public --tag ${NPM_TAG:-latest}"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.29.7"
+  }
+}

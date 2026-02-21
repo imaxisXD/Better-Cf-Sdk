@@ -1,0 +1,35 @@
+# dependencies
+node_modules/
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+
+# OS/editor
+.DS_Store
+
+# build artifacts
+apps/docs/dist/
+**/.astro/
+packages/*/dist/
+packages/*/.tmp-tests/
+coverage/
+*.tsbuildinfo
+
+# generated local artifacts
+.better-cf/
+tmp/
+.temp/
+
+# local convenience symlinks (source lives in packages/better-cf/*)
+examples
+fixtures
+tests
+
+# environment secrets
+.env
+.env.*
+!.env.example
