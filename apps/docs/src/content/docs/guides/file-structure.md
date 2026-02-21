@@ -1,19 +1,23 @@
 ---
-title: File Structure
-description: What files better-cf creates in your project after install and CLI commands, and how to use them.
+title: Understand Generated File Structure
+description: Know which files are authored vs generated across init, generate, dev, and deploy workflows.
 ---
 
-This page is about **your app project structure** after using the CLI.
+Use this guide to understand where Queue SDK writes files and how discovery decides what gets generated.
 
-Source of truth for everything below:
+## What You Will Achieve
 
-- `packages/better-cf/src/cli/commands/init.ts`
-- `packages/better-cf/src/cli/commands/generate.ts`
-- `packages/better-cf/src/cli/codegen.ts`
-- `packages/better-cf/src/cli/env-types.ts`
-- `packages/better-cf/src/cli/wrangler/*.ts`
+- identify files created/updated by `better-cf init` and `better-cf generate`
+- separate authored files from managed generated artifacts
+- verify queue discovery rules when declarations are not picked up
 
-## After Install + `better-cf init`
+## Before You Start
+
+- run inside your app project directory
+- have Queue SDK installed
+- understand basic queue declaration flow
+
+## Step 1: Initialize Project Structure
 
 Run:
 
@@ -21,18 +25,16 @@ Run:
 npx better-cf init
 ```
 
-`init` creates/updates these files in your project:
+Expected output:
 
-| File | Created or Updated | Why |
-|---|---|---|
-| `better-cf.config.ts` | Created if missing | Exports `defineQueue`/`defineWorker` and `betterCfConfig`. |
-| `worker.ts` | Created if both `worker.ts` and `src/worker.ts` are missing | Default worker entry scaffold. |
-| `.better-cf/` | Ensured directory exists | Output folder for generated files. |
-| `.gitignore` | Created if missing, or appended | Ensures `.better-cf/` is ignored. |
-| `package.json` | Updated if present | Adds/sets scripts: `dev`, `deploy`, `generate`. |
-| `wrangler.toml` | Created only if no `wrangler.toml`, `wrangler.json`, or `wrangler.jsonc` exists | Initial Wrangler config with `main = ".better-cf/entry.ts"` and managed markers. |
+- `better-cf.config.ts` exists (created if missing)
+- `worker.ts` exists when no worker entry is found
+- `.better-cf/` directory is ensured
+- `.gitignore` includes `.better-cf/`
+- `package.json` scripts include `dev`, `generate`, `deploy`
+- `wrangler.toml` may be created if no Wrangler config exists
 
-## After `better-cf generate`
+## Step 2: Generate Managed Artifacts
 
 Run:
 
@@ -40,74 +42,47 @@ Run:
 npx better-cf generate
 ```
 
-`generate` creates these files:
+Expected output:
 
-| File | Why it exists | Do you edit it? |
-|---|---|---|
-| `.better-cf/entry.ts` | Generated worker entry that wires discovered queues + your worker handlers. | No (generated). |
-| `.better-cf/types.d.ts` | Generated queue binding type augmentation (`BetterCfGeneratedBindings`). | No (generated). |
-| `.better-cf/wrangler-env.d.ts` | Output of `wrangler types` (or fallback when skipped). | No (generated). |
-| `.better-cf/auto-env.d.ts` | Merges Wrangler env type into `BetterCfAutoEnv`. | No (generated). |
+- `.better-cf/entry.ts` generated
+- `.better-cf/types.d.ts` generated
+- `.better-cf/wrangler-env.d.ts` generated/fallback written
+- `.better-cf/auto-env.d.ts` generated
+- Wrangler config patched with managed queue mapping and entry path
 
-`generate` also patches Wrangler config:
+## Step 3: Apply Discovery Rules Correctly
 
-- Updates `main` to `.better-cf/entry.ts`.
-- Syncs queue producer/consumer sections from discovered queue definitions.
-- Supports `wrangler.toml`, `wrangler.jsonc`, and `wrangler.json`.
+Queue discovery picks up declarations when:
 
-## `better-cf dev` and `better-cf deploy`
+- queue declaration is exported
+- `defineQueue` is imported from your `better-cf.config` module
+- file is valid TypeScript and scannable by the CLI
 
-| Command | What it does with files |
-|---|---|
-| `better-cf dev` | Runs the same generate pipeline, then starts `wrangler dev`; re-runs generation on file changes. |
-| `better-cf deploy` | Runs the same generate pipeline, then runs `wrangler deploy`. |
+Expected output:
 
-## Minimal App Structure for Queue Work
+- discovered queues produce derived queue and binding names
+- generation succeeds without discovery blocking errors
 
-After `init` and creating one queue, a typical project looks like:
+<div class="dx-callout">
+  <strong>Good to know:</strong> folder name is not part of queue discovery. <code>src/queues/*</code> is convention only, not a requirement.
+</div>
 
-```text
-your-project/
-  better-cf.config.ts          # authored by you (created by init)
-  worker.ts                    # authored by you (created by init if missing)
-  src/
-    queues/
-      signup.ts                # authored by you (defineQueue export)
-  wrangler.toml                # created or patched by CLI
-  .better-cf/
-    entry.ts                   # generated
-    types.d.ts                 # generated
-    wrangler-env.d.ts          # generated
-    auto-env.d.ts              # generated
-```
+## Troubleshooting
 
-`src/queues/*` is a common convention shown in examples, not a required folder.
+### Queue file is ignored
 
-## How to Do Queue End-to-End
+Ensure declaration is exported and imported from `better-cf.config`; then rerun generation.
 
-1. Run `npx better-cf init`.
-2. Define queue exports in your app (for example `src/queues/signup.ts`) using `defineQueue(...)`.
-3. Keep worker HTTP/scheduled handlers in `worker.ts` using `defineWorker(...)`.
-4. Run `npx better-cf dev` for local development.
-5. Run `npx better-cf deploy` to deploy.
+### Queue/binding name conflicts
 
-## Queue Discovery Rules (Why a Queue Is or Isn’t Picked Up)
+Rename queue exports to avoid collisions in derived queue and binding names.
 
-Queue discovery scans your project for exported `defineQueue(...)` usage and then generates wiring.
+### Generated files appear stale
 
-Practical implications:
+Run `better-cf generate` and check for scanner diagnostics or invalid static config warnings.
 
-- Queue declarations must be exported.
-- The file must import `defineQueue` from your `better-cf.config` module.
-- Folder name and location are not part of discovery (`src/q/*`, `src/queues/*`, or any other path all work).
-- Queue/binding names are derived automatically from export names.
-  - Example: `signupQueue` -> queue name `signup` -> binding `QUEUE_SIGNUP`.
+## Next Steps
 
-## Queue/Subscription Admin Commands (No Local File Creation)
-
-These commands call Wrangler APIs and typically do not create local files:
-
-- `queue:list`, `queue:create`, `queue:update`, `queue:delete`, `queue:info`, `queue:pause`, `queue:resume`, `queue:purge`
-- `queue:consumer:http:add`, `queue:consumer:http:remove`
-- `queue:consumer:worker:add`, `queue:consumer:worker:remove`
-- `subscription:list`, `subscription:create`, `subscription:get`, `subscription:update`, `subscription:delete`
+- Build first end-to-end flow in [Build Your First Queue](/guides/first-queue)
+- Understand automation cycles in [Run the Automation CLI Workflow](/guides/automation-cli)
+- Inspect architecture internals in [Discovery and Codegen](/architecture/discovery-and-codegen)

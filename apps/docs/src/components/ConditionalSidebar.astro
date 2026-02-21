@@ -7,17 +7,17 @@ const currentSlug = typeof props.slug === 'string' ? props.slug : '';
 const suiteModeSlugs = new Set(['', 'why-better-cf', 'reference/roadmap']);
 const suiteMode = suiteModeSlugs.has(currentSlug);
 
-const suiteGroupLabels = new Set(['Why better-cf', 'SDK Catalog']);
-const queueGroupLabels = new Set(['Queue SDK Docs']);
-
 const originalSidebar = Array.isArray(props.sidebar) ? props.sidebar : [];
-const allowedGroupLabels = suiteMode ? suiteGroupLabels : queueGroupLabels;
+const groups = originalSidebar.filter((entry) => entry?.type === 'group');
+const groupByLabel = new Map(groups.map((entry) => [entry.label, entry]));
 
-const filteredSidebar = originalSidebar.filter(
-  (entry) => entry?.type === 'group' && allowedGroupLabels.has(entry.label)
-);
+const orderedLabels = suiteMode ? ['Suite', 'Queue SDK'] : ['Queue SDK', 'Suite'];
+const orderedGroups = orderedLabels
+  .map((label) => groupByLabel.get(label))
+  .filter(Boolean);
 
-const sidebar = filteredSidebar.length > 0 ? filteredSidebar : originalSidebar;
+const remainingGroups = groups.filter((entry) => !orderedLabels.includes(entry.label));
+const sidebar = [...orderedGroups, ...remainingGroups];
 ---
 
 <DefaultSidebar {...props} sidebar={sidebar} />

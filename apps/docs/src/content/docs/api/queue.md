@@ -1,37 +1,89 @@
 ---
-title: Queue SDK API
-description: Queue SDK (Alpha) runtime API for creating queues, workers, and typed producer calls.
+title: Queue SDK API Reference
+description: Signatures, parameters, return shapes, examples, and constraints for better-cf/queue.
 ---
 
-Queue SDK is the currently shipped Alpha package in the better-cf SDK suite.
+This page documents the runtime API surface for queue and worker definitions.
 
-## Canonical Imports
+## What You Will Achieve
+
+- understand exact signatures for `createSDK`, `defineQueue`, and `defineWorker`
+- choose the right queue shape for push, batch, pull, or multi-job use cases
+- apply producer APIs with correct message and option types
+
+## Before You Start
+
+- import APIs from `better-cf/queue`
+- understand queue declaration discovery rules from [File Structure](/guides/file-structure)
+
+## Canonical Import
 
 ```ts
 import { createSDK } from 'better-cf/queue';
 ```
 
-## `createSDK<Env>()`
+## Step 1: Create SDK Helpers
+
+### Signature
 
 ```ts
-const { defineQueue, defineWorker } = createSDK<MyEnv>();
+createSDK<E extends Record<string, unknown> = BetterCfAutoEnv>(): {
+  defineQueue: ...
+  defineWorker: ...
+}
 ```
 
-- `Env` is optional.
-- Default mode (`createSDK()`) uses generated `BetterCfAutoEnv` bindings.
-- Explicit mode (`createSDK<Env>()`) is recommended when your app owns strict env types.
+### Parameters
 
-## `defineQueue(...)`
+- `E` (optional generic): app env type
 
-`defineQueue` supports three queue shapes.
+### Returns
 
-### 1. Single Queue: Push Consumer (`process`)
+- `defineQueue`: queue definition factory
+- `defineWorker`: worker definition factory
+
+### Example
+
+```ts
+type Env = {
+  QUEUE_SIGNUP: Queue;
+  DB: D1Database;
+};
+
+export const { defineQueue, defineWorker } = createSDK<Env>();
+```
+
+## Step 2: Define a Push Queue (`process`)
+
+### Signature (single-message push mode)
+
+```ts
+defineQueue({
+  message,
+  process,
+  onFailure?,
+  retry?,
+  retryDelay?,
+  deadLetter?,
+  deliveryDelay?,
+  batch?,
+  consumer?: { type?: 'worker' }
+})
+```
+
+### Returns
+
+```ts
+QueueHandle<E, Message>
+```
+
+### Example
 
 ```ts
 const signupQueue = defineQueue({
   message: z.object({ email: z.string().email() }),
   retry: 3,
-  deliveryDelay: '5s',
+  retryDelay: '30s',
   process: async (ctx, message) => {
     console.log(ctx.message.id, message.email);
   },
@@ -41,16 +93,36 @@ const signupQueue = defineQueue({
 });
 ```
 
-### 2. Single Queue: Batch Consumer (`processBatch`)
+## Step 3: Define a Batch Queue (`processBatch`)
+
+### Signature (batch push mode)
+
+```ts
+defineQueue({
+  message,
+  processBatch,
+  onFailure?,
+  batch?: { maxSize?, timeout?, maxConcurrency? },
+  retry?,
+  retryDelay?,
+  deadLetter?,
+  deliveryDelay?,
+  consumer?: { type?: 'worker' }
+})
+```
+
+### Returns
+
+```ts
+QueueHandle<E, Message>
+```
+
+### Example
 
 ```ts
 const auditQueue = defineQueue({
   message: z.object({ action: z.string() }),
-  batch: {
-    maxSize: 10,
-    timeout: '30s',
-    maxConcurrency: 2
-  },
+  batch: { maxSize: 10, timeout: '30s', maxConcurrency: 2 },
   processBatch: async (ctx, messages) => {
     console.log(messages.length, ctx.batch.queue);
     ctx.batch.ackAll();
@@ -58,7 +130,28 @@ const auditQueue = defineQueue({
 });
 ```
 
-### 3. Single Queue: HTTP Pull Configuration
+## Step 4: Define an HTTP Pull Queue (`consumer.type = "http_pull"`)
+
+### Signature (pull mode)
+
+```ts
+defineQueue({
+  message,
+  consumer: { type: 'http_pull', visibilityTimeout? },
+  retry?,
+  retryDelay?,
+  deadLetter?,
+  deliveryDelay?
+})
+```
+
+### Returns
+
+```ts
+QueueHandle<E, Message>
+```
+
+### Example
 
 ```ts
 const pullQueue = defineQueue({
@@ -69,9 +162,32 @@ const pullQueue = defineQueue({
 });
 ```
 
-`http_pull` queues are config/admin focused in this SDK and cannot define `process`, `processBatch`, or `onFailure`.
+## Step 5: Define a Multi-Job Queue
 
-### 4. Multi-Job Queue
+### Signature
+
+```ts
+defineQueue({
+  retry?,
+  retryDelay?,
+  deadLetter?,
+  deliveryDelay?,
+  batch?,
+  <jobName>: {
+    message,
+    process,
+    onFailure?
+  }
+})
+```
+
+### Returns
+
+```ts
+MultiJobQueueHandle<E, Jobs>
+```
+
+### Example
 
 ```ts
 const jobsQueue = defineQueue({
@@ -91,25 +207,23 @@ const jobsQueue = defineQueue({
 });
 ```
 
-Multi-job queues expose per-job producers:
+## Step 6: Use Producer APIs
+
+### `send(ctx, data, options?)`
 
 ```ts
-await jobsQueue.signup.send(ctx, { email: 'dev@example.com' });
-await jobsQueue.invoice.send(ctx, { amount: 99 });
+await signupQueue.send(
+  { env: ctx.env },
+  { email: 'dev@example.com' },
+  { delay: '10s', contentType: 'json' }
+);
 ```
 
-## Producer APIs
-
-Every queue handle supports:
-
-- `send(ctx, data, options?)`
-- `sendBatch(ctx, messages, options?)`
+### `sendBatch(ctx, messages, options?)`
 
 ```ts
-await signupQueue.send(ctx, { email: 'dev@example.com' }, { delay: '10s', contentType: 'json' });
-
 await signupQueue.sendBatch(
-  ctx,
+  { env: ctx.env },
   [
     { data: { email: 'a@example.com' } },
     { data: { email: 'b@example.com' }, delay: '30s' }
@@ -118,9 +232,26 @@ await signupQueue.sendBatch(
 );
 ```
 
-`sendBatch` supports per-message overrides merged with batch-level defaults.
+### Producer Return Type
 
-## `defineWorker(...)`
+- both methods return `Promise<void>`
+
+## Step 7: Define Worker Runtime Entry
+
+### Signature
+
+```ts
+defineWorker({
+  fetch(request, ctx): Promise<Response>,
+  scheduled?(event, ctx): Promise<void>
+})
+```
+
+### Returns
+
+- module worker-compatible export with `fetch` and optional `scheduled`
+
+### Example
 
 ```ts
 export default defineWorker({
@@ -134,14 +265,33 @@ export default defineWorker({
 });
 ```
 
-- `ctx.env` is typed as `QueueEnv<Env>`.
-- Generated queue bindings are included in runtime env typing.
+<div class="dx-callout">
+  <strong>Good to know:</strong> queue config fails fast for invalid combinations. Example: both <code>process</code> and <code>processBatch</code>, push handlers in pull mode, or zero-job multi-queue definitions.
+</div>
 
-## Validation Constraints
+## Constraints
 
-Invalid queue definitions fail fast, for example:
+- push mode requires exactly one of `process` or `processBatch`
+- pull mode cannot include `process`, `processBatch`, or `onFailure`
+- multi-job mode requires at least one job object
+- queue binding injection depends on generated wiring (`dev`, `generate`, or `deploy` flow)
 
-- defining both `process` and `processBatch`
-- defining neither in push mode
-- using `consumer.type = "http_pull"` with push handlers
-- multi-job queues with zero jobs
+## Troubleshooting
+
+### Producer throws `Queue binding not initialized`
+
+Run through generation/deploy flow so bindings are set in generated entry.
+
+### Invalid queue shape errors
+
+Check constraints above and validate queue declaration mode.
+
+### Env typing mismatch
+
+Use explicit `createSDK<Env>()` or align generated auto-env artifacts.
+
+## Next Steps
+
+- Test queue handlers in [Queue SDK Testing API](/api/testing)
+- Tune queue behavior in [Retry + DLQ + Batch Tuning](/guides/retry-batch-tuning)
+- Inspect mapping output in [Wrangler Mapping](/reference/wrangler-mapping)

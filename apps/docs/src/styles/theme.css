@@ -21,8 +21,8 @@
   --sl-content-width: 70rem;
   --sl-sidebar-width: 19rem;
   --sl-text-h1: 3rem;
-  --sl-text-h2: 2.3rem;
-  --sl-text-h3: 1.7rem;
+  --sl-text-h2: 1.8rem;
+  --sl-text-h3: 1.5rem;
   --sl-text-h4: 1.3rem;
   --sl-line-height: 1.7;
   --sl-line-height-headings: 1.15;
@@ -106,8 +106,8 @@ body::before {
 
 h1, h2, h3, h4, h5, h6 {
   font-family: 'Geist Mono', monospace;
-  letter-spacing: -0.01em;
   font-weight: 500;
+  font-size: 2.5rem;
 }
 
 /* ── Hero section ───────────────────────────────────────────── */
@@ -797,9 +797,11 @@ summary:focus-visible {
 }
 
 /* ── Sidebar active item ────────────────────────────────────── */
-[aria-current='page'] {
-  color: #1ff682 !important;
-  text-shadow: 0 0 6px hsl(148, 92%, 54%, 0.2);
+:root:not([data-theme='light']) [aria-current='page'],
+:root:not([data-theme='light']) [aria-current='page']:hover,
+:root:not([data-theme='light']) [aria-current='page']:focus {
+  color: hsl(0, 0%, 8%) !important;
+  text-shadow: none;
 }
 
 :root[data-theme='light'] [aria-current='page'],

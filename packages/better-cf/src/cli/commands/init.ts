@@ -32,18 +32,31 @@ export async function initCommand(rootDir = process.cwd()): Promise<void> {
   }
 
   const packageJsonPath = path.join(rootDir, 'package.json');
-  if (fs.existsSync(packageJsonPath)) {
-    const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8')) as {
-      scripts?: Record<string, string>;
-    };
-    packageJson.scripts = packageJson.scripts ?? {};
-    packageJson.scripts.dev = packageJson.scripts.dev ?? 'better-cf dev';
-    packageJson.scripts.deploy = packageJson.scripts.deploy ?? 'better-cf deploy';
-    packageJson.scripts.generate = 'better-cf generate';
+  const packageJsonExists = fs.existsSync(packageJsonPath);
+  const packageJson = packageJsonExists
+    ? (JSON.parse(fs.readFileSync(packageJsonPath, 'utf8')) as {
+        scripts?: Record<string, string>;
+      })
+    : ({
+        name: derivePackageName(rootDir),
+        version: '0.0.0',
+        private: true,
+        scripts: {}
+      } as {
+        scripts?: Record<string, string>;
+      });
 
-    fs.writeFileSync(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`, 'utf8');
-    logger.success('Updated package.json scripts');
+  if (!packageJsonExists) {
+    logger.success('Created package.json');
   }
+
+  packageJson.scripts = packageJson.scripts ?? {};
+  packageJson.scripts.dev = packageJson.scripts.dev ?? 'better-cf dev';
+  packageJson.scripts.deploy = packageJson.scripts.deploy ?? 'better-cf deploy';
+  packageJson.scripts.generate = 'better-cf generate';
+
+  fs.writeFileSync(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`, 'utf8');
+  logger.success('Updated package.json scripts');
 
   const wranglerTomlPath = path.join(rootDir, 'wrangler.toml');
   const wranglerJsoncPath = path.join(rootDir, 'wrangler.jsonc');
@@ -59,6 +72,16 @@ export async function initCommand(rootDir = process.cwd()): Promise<void> {
   }
 
   logger.info('Next steps: create a queue export and run `better-cf dev`.');
+}
+
+function derivePackageName(rootDir: string): string {
+  const raw = path.basename(path.resolve(rootDir)).toLowerCase().trim();
+  const normalized = raw
+    .replace(/[^a-z0-9._-]+/g, '-')
+    .replace(/^-+/, '')
+    .replace(/-+$/, '');
+
+  return normalized || 'better-cf-app';
 }
 
 function defaultConfigTemplate(): string {

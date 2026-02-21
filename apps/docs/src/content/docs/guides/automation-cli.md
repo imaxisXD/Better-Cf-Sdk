@@ -1,63 +1,81 @@
 ---
-title: Automation CLI
-description: How the Queue SDK (Alpha) automation loop works in dev, generate, and deploy flows.
+title: Run the Automation CLI Workflow
+description: Understand how better-cf dev/generate/deploy automates queue discovery, codegen, and Wrangler sync.
 ---
 
-This guide documents automation behavior for Queue SDK (Alpha), the currently shipped SDK in the suite.
+Use the automation loop to keep queue declarations, generated files, and Wrangler config in sync.
 
-The CLI is built around one idea: keep queue wiring and Wrangler config synchronized automatically.
+## What You Will Achieve
 
-## Command Modes
+- run the continuous local loop with `better-cf dev`
+- run deterministic CI/predeploy generation with `better-cf generate`
+- understand when and why generation is re-triggered
 
-### `better-cf dev`
+## Before You Start
 
-Continuous mode for local development.
+- complete [Install Queue SDK and Tooling](/guides/installation)
+- define at least one exported queue declaration
+- have Wrangler available in your workspace
+
+## Step 1: Run Continuous Development Mode
 
 ```bash
 better-cf dev --port 8787
 ```
 
-### `better-cf generate`
+Expected output:
 
-One-shot mode for CI and pre-deploy checks.
+- scanner detects queue definitions
+- generated `.better-cf/*` artifacts are refreshed
+- Wrangler config queue mapping is patched
+- `wrangler dev` starts and restarts on relevant changes
+
+## Step 2: Run One-shot Generation Mode
 
 ```bash
 better-cf generate
 ```
 
-## What `dev` Does on Each Cycle
+Expected output:
 
-1. scans project files for `defineQueue` exports
-2. validates queue definitions and emits diagnostics
-3. generates `.better-cf/entry.ts` and generated types
-4. patches supported Wrangler config (`wrangler.toml` or `wrangler.jsonc`)
-5. regenerates `.better-cf/auto-env.d.ts`
-6. starts or restarts `wrangler dev`
-7. repeats when relevant files change
+- queue discovery diagnostics are printed
+- `.better-cf/entry.ts` and env type artifacts are regenerated
+- no runtime server process is started
 
-## Useful Flags
+## Step 3: Understand Useful Flags
 
 ```bash
 better-cf dev --port 8788
 better-cf dev --no-watch
 ```
 
-- `--port`: passes through to `wrangler dev --port`
-- `--no-watch`: runs initial build + dev server without file watching
+- `--port`: pass-through to `wrangler dev --port`
+- `--no-watch`: run initial generation + dev startup without file watch loop
 
-## Remote Mode Constraint
+Expected output:
 
-`--remote` is intentionally blocked for queue development.
-
-Cloudflare Queues local workflow in this SDK is local-runtime oriented. If you pass `--remote`, the CLI exits with `REMOTE_QUEUE_DEV_UNSUPPORTED`.
-
-## Typical Workflow
-
-1. run `better-cf dev` while building queue handlers
-2. resolve diagnostics immediately when scanner errors appear
-3. run `better-cf generate` in CI before deploy
-4. run `better-cf deploy` for production release
+- local loop behavior matches the chosen development mode
 
 <div class="dx-callout">
-  <strong>DX tip:</strong> keep queue config mostly literal (instead of deeply computed objects) for the best static extraction and Wrangler patch accuracy.
+  <strong>Good to know:</strong> <code>better-cf dev --remote</code> is intentionally blocked for queue workflow and exits with <code>REMOTE_QUEUE_DEV_UNSUPPORTED</code>.
 </div>
+
+## Troubleshooting
+
+### Queue changes are not reflected
+
+Re-run `better-cf generate` and confirm queue declarations are exported from files imported via `better-cf.config`.
+
+### Frequent regen churn
+
+Keep queue config mostly literal and reduce dynamic config construction in declaration files.
+
+### Dev works but deploy fails
+
+Run `better-cf generate` in CI before deploy and inspect diagnostics as a preflight gate.
+
+## Next Steps
+
+- Learn command flags in [CLI Command Reference](/reference/cli-reference)
+- Operate queue resources via [Queue Admin CLI](/guides/queue-admin-cli)
+- Inspect architecture flow in [Discovery and Codegen](/architecture/discovery-and-codegen)

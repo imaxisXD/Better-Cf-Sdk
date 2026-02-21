@@ -1,35 +1,52 @@
 ---
 title: Queue SDK Testing API
-description: Queue SDK (Alpha) testing helpers for running queue handlers without Cloudflare runtime bootstrap.
+description: Reference for testQueue and queue handler unit-testing workflows without Cloudflare runtime bootstrap.
 ---
 
-This page covers the Queue SDK (Alpha) testing surface in the better-cf SDK suite.
+Test queue behavior directly with deterministic inputs and assertions.
 
-Import from `better-cf/testing`.
+## What You Will Achieve
+
+- run queue handlers in unit tests without booting Worker runtime
+- provide single-message or batch test payloads
+- assert acked vs retried outcomes from one helper call
+
+## Before You Start
+
+- import `testQueue` from `better-cf/testing`
+- have a queue handle created with `defineQueue(...)`
+- have test runtime set up (for example Vitest)
+
+## Step 1: Import and Call `testQueue`
 
 ```ts
 import { testQueue } from 'better-cf/testing';
-```
 
-## `testQueue(handle, options)`
-
-```ts
 const result = await testQueue(signupQueue, {
   env: { QUEUE_SIGNUP: {} as Queue },
   message: { email: 'dev@example.com' }
 });
 ```
 
-### Options
+Expected output:
 
-- `env`: typed env object passed to queue consumer context
-- `message`: single payload
-- `messages`: batch payloads
-- `attempts`: optional attempts number override
+- queue consumer logic runs against your provided test payload
+- helper returns a result object with processing outcome arrays
 
-You must provide either `message` or `messages`.
+## Step 2: Use Valid Options
 
-### Result
+`testQueue(handle, options)` supports:
+
+- `env` (required): env object passed to queue consumer context
+- `message` (optional): one payload
+- `messages` (optional): many payloads
+- `attempts` (optional): attempts count override for test message metadata
+
+Expected output:
+
+- exactly one of `message` or `messages` is provided
+
+## Step 3: Assert Result Shape
 
 ```ts
 type TestQueueResult<TMessage> = {
@@ -38,39 +55,33 @@ type TestQueueResult<TMessage> = {
 };
 ```
 
-## Single-message Assertion Example
+Example assertions:
 
 ```ts
-const result = await testQueue(signupQueue, {
-  env: {},
-  message: { email: 'dev@example.com' }
-});
-
 expect(result.acked).toEqual([{ email: 'dev@example.com' }]);
 expect(result.retried).toEqual([]);
 ```
 
-## Batch Assertion Example
+<div class="dx-callout">
+  <strong>Good to know:</strong> if you omit both <code>message</code> and <code>messages</code>, <code>testQueue</code> throws immediately.
+</div>
 
-```ts
-const result = await testQueue(auditQueue, {
-  env: {},
-  messages: [{ action: 'created' }, { action: 'deleted' }]
-});
+## Troubleshooting
 
-expect(result.acked).toHaveLength(2);
-```
+### `testQueue requires message or messages`
 
-## Retry-path Assertion Example
+Provide either `message` or `messages` in options.
 
-```ts
-const result = await testQueue(retryQueue, {
-  env: {},
-  message: { id: 'task-1' },
-  attempts: 3
-});
+### Unexpected retries in result
 
-expect(result.retried).toContainEqual({ id: 'task-1' });
-```
+Check handler logic for explicit retry paths and verify `attempts` value used in test setup.
 
-`testQueue` is best for queue behavior unit tests; combine it with integration tests for full Worker runtime validation.
+### Type mismatch in test payload
+
+Align payload shape with queue `message` schema used in `defineQueue(...)`.
+
+## Next Steps
+
+- Review queue runtime APIs in [Queue SDK API Reference](/api/queue)
+- Build higher-level patterns in [Producer Patterns](/guides/producer-patterns)
+- Add failure path tests with [Troubleshooting](/guides/troubleshooting)

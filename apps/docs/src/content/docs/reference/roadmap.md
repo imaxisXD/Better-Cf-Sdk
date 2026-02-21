@@ -1,41 +1,80 @@
 ---
 title: Roadmap
-description: Directional roadmap for the better-cf SDK suite and current SDK maturity status.
+description: Directional roadmap for the better-cf SDK suite and current maturity status.
 ---
 
-This roadmap is directional, not a release contract.
+This roadmap describes direction and prioritization, not release-date guarantees.
 
-## SDK Status Snapshot
+## What You Will Achieve
+
+- understand current package maturity across the suite
+- see what Queue SDK Alpha is optimizing now
+- understand how future namespaces are planned and constrained
+
+## Before You Start
+
+- identify your current adoption stage (new build vs migration)
+- review current Queue SDK limits in [Limitations](/limitations)
+- align expectations with directional roadmap semantics
+
+## Step 1: Read Current SDK Status
 
 - `better-cf/queue`: **Alpha**
 - `better-cf/workflow`: **Coming Soon**
 - `better-cf/durable-object`: **Coming Soon**
 
-## Current Focus (Queue SDK Alpha)
+Expected output:
+
+- current production adoption decisions are aligned to maturity stage
+
+## Step 2: Understand Queue SDK Alpha Focus
+
+Current focus areas:
 
 - stabilize queue DX and scanner reliability
 - expand docs with source-backed production patterns
 - keep generated wiring predictable across supported Wrangler configs
-- tighten migration ergonomics for teams moving from manual queue setups
+- improve migration ergonomics from manual queue setups
 
-## Planned Progression
+Expected output:
 
-Queue SDK is intentionally labeled Alpha while core ergonomics and edge cases are hardened.
+- roadmap interpretation is tied to active engineering priorities
 
-As stability and coverage improve, this will progress to Beta and then stable release criteria.
+## Step 3: Understand Planned Progression
 
-## Reserved Future Namespaces
+- Queue SDK remains Alpha while core ergonomics and edge cases are hardened
+- progression target is Beta, then stable criteria
+- reserved namespaces indicate intended product direction, not near-term release timing
+
+Reserved namespaces:
 
 - `better-cf/workflow`
 - `better-cf/durable-object`
 
-## Principles for Future Additions
+Expected output:
 
-- opinionated defaults first
-- preserve direct Cloudflare escape hatches
-- prioritize maintainable DX over thin wrapper sprawl
-- keep package APIs composable and type-first
+- roadmap expectations are realistic and non-speculative
 
-## What Is Not Implied
+<div class="dx-callout">
+  <strong>Good to know:</strong> reserved names signal architectural intent only. They are not delivery commitments by themselves.
+</div>
 
-Reserved namespaces do not imply immediate availability or timeline guarantees.
+## Troubleshooting
+
+### Team treats roadmap as release contract
+
+Use roadmap for directional planning and gate release dependencies on shipped milestones only.
+
+### Alpha concerns block adoption entirely
+
+Adopt Queue SDK for bounded workflows first and keep native Cloudflare fallbacks for unsupported edges.
+
+### Future namespace confusion
+
+Treat unshipped namespaces as non-actionable until package docs and compatibility surfaces are published.
+
+## Next Steps
+
+- Validate current support boundaries in [Compatibility Reference](/reference/compatibility)
+- Evaluate tradeoffs in [Cloudflare vs better-cf](/comparison/cloudflare-vs-better-cf)
+- Track architecture assumptions in [IA Benchmark (Next.js App Router)](/reference/ia-benchmark-next-app-router)

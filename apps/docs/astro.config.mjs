@@ -14,89 +14,78 @@ export default defineConfig({
       },
       sidebar: [
         {
-          label: 'Why better-cf',
-          items: [
-            { label: 'Why better-cf', link: '/why-better-cf' },
-            { label: 'Roadmap', link: '/reference/roadmap' }
-          ]
-        },
-        {
-          label: 'SDK Catalog',
+          label: 'Suite',
           items: [
             {
-              label: 'Queue SDK',
-              link: '/getting-started',
-              badge: { text: 'Alpha', class: 'sdk-badge-alpha' }
+              label: 'Overview',
+              link: '/'
             },
             {
-              label: 'Workflow SDK',
-              link: '#',
-              badge: { text: 'Coming Soon', class: 'sdk-badge-coming-soon' },
-              attrs: {
-                class: 'sdk-link--coming-soon',
-                'aria-disabled': true,
-                tabindex: -1
-              }
+              label: 'Why better-cf',
+              link: '/why-better-cf'
             },
             {
-              label: 'Durable Objects SDK',
-              link: '#',
-              badge: { text: 'Coming Soon', class: 'sdk-badge-coming-soon' },
-              attrs: {
-                class: 'sdk-link--coming-soon',
-                'aria-disabled': true,
-                tabindex: -1
-              }
+              label: 'Roadmap',
+              link: '/reference/roadmap'
             }
           ]
         },
         {
-          label: 'Queue SDK Docs',
+          label: 'Queue SDK',
           items: [
             {
-              label: 'Start Here',
+              label: 'Getting Started',
               items: [
-                { label: 'Getting Started', link: '/getting-started' },
+                { label: 'Quickstart', link: '/getting-started' },
+                { label: 'Installation & Prereqs', link: '/guides/installation' },
+                { label: 'First Queue Walkthrough', link: '/guides/first-queue' },
+                { label: 'File Structure', link: '/guides/file-structure' },
                 { label: 'Limitations', link: '/limitations' }
-              ]
-            },
-            {
-              label: 'Examples',
-              items: [{ label: 'Queue Cookbook', link: '/examples/cookbook' }]
-            },
-            {
-              label: 'Comparison',
-              items: [
-                {
-                  label: 'Cloudflare vs better-cf',
-                  link: '/comparison/cloudflare-vs-better-cf'
-                }
-              ]
-            },
-            {
-              label: 'API',
-              items: [
-                { label: 'Queue SDK API', link: '/api/queue' },
-                { label: 'Testing API', link: '/api/testing' }
               ]
             },
             {
               label: 'Guides',
               items: [
-                { label: 'Automation CLI', link: '/guides/automation-cli' },
-                { label: 'Env Typing Modes', link: '/guides/env-typing-modes' },
-                { label: 'File Structure', link: '/guides/file-structure' },
+                { label: 'Producer Patterns', link: '/guides/producer-patterns' },
+                { label: 'Consumer Patterns', link: '/guides/consumer-patterns' },
+                { label: 'Retry + DLQ + Batch Tuning', link: '/guides/retry-batch-tuning' },
+                { label: 'HTTP Pull Consumers', link: '/guides/http-pull-consumers' },
                 { label: 'Hono', link: '/guides/hono' },
-                { label: 'Legacy Cloudflare', link: '/guides/legacy-cloudflare' },
-                { label: 'Queue Admin CLI', link: '/guides/queue-admin-cli' }
+                { label: 'Env Typing Modes', link: '/guides/env-typing-modes' },
+                { label: 'Legacy Cloudflare Migration', link: '/guides/legacy-cloudflare' }
               ]
             },
             {
-              label: 'Reference',
+              label: 'Operations',
               items: [
+                { label: 'Automation CLI', link: '/guides/automation-cli' },
+                { label: 'Queue Admin CLI', link: '/guides/queue-admin-cli' },
+                { label: 'Production Checklist', link: '/guides/production-checklist' },
+                { label: 'Troubleshooting', link: '/guides/troubleshooting' }
+              ]
+            },
+            {
+              label: 'API Reference',
+              items: [
+                { label: 'Queue SDK API', link: '/api/queue' },
+                { label: 'Testing API', link: '/api/testing' },
+                { label: 'CLI Command Reference', link: '/reference/cli-reference' }
+              ]
+            },
+            {
+              label: 'Architecture',
+              items: [
+                { label: 'Discovery + Codegen', link: '/architecture/discovery-and-codegen' },
                 { label: 'Wrangler Mapping', link: '/reference/wrangler-mapping' },
                 { label: 'Error Reference', link: '/reference/errors' },
                 { label: 'Compatibility', link: '/reference/compatibility' }
+              ]
+            },
+            {
+              label: 'Examples & Comparison',
+              items: [
+                { label: 'Queue Cookbook', link: '/examples/cookbook' },
+                { label: 'Cloudflare vs better-cf', link: '/comparison/cloudflare-vs-better-cf' }
               ]
             }
           ]

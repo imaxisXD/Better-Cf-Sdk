@@ -1,40 +1,46 @@
 ---
-title: Queue SDK Getting Started
-description: Queue SDK (Alpha) quickstart for shipping your first typed queue with generated wiring.
+title: Queue SDK Quickstart
+description: Ship your first typed queue in minutes using generated wiring and local automation.
 ---
 
-Queue SDK is currently in Alpha and is the first available package in the better-cf SDK suite.
+Build one working queue consumer flow quickly, then branch into focused guides for production hardening.
 
-## 1. Install
+## What You Will Achieve
 
-```bash
-npm i better-cf zod
-npm i -D wrangler @cloudflare/workers-types typescript
-```
+- initialize Queue SDK in your project
+- define one typed queue and one worker entry
+- run local generation and deploy workflow
 
-## 2. Initialize Project Files
+## Before You Start
+
+- Node.js `>=18.18`
+- dependencies installed (see [Installation & Prereqs](/guides/installation))
+- a project folder where you can run `npm` commands
+
+## Step 1: Initialize Project Files
 
 ```bash
 npx better-cf init
 ```
 
-This creates starter files for `better-cf.config.ts` and worker wiring.
+Expected output:
 
-## 3. Define SDK + Env
+- `better-cf.config.ts` and `worker.ts` are present
+- `.better-cf/` output folder exists
+
+## Step 2: Define SDK Exports
 
 ```ts
 import { createSDK } from 'better-cf/queue';
 
-type Env = {
-  QUEUE_SIGNUP: Queue;
-};
-
-export const { defineQueue, defineWorker } = createSDK<Env>();
+export const { defineQueue, defineWorker } = createSDK();
 ```
 
-## 4. Define Your First Queue
+Expected output:
 
-You can place this queue file anywhere in your project; `src/queues/*` is just a convention.
+- queue and worker helpers are exported from one config module
+
+## Step 3: Define One Queue
 
 ```ts
 import { z } from 'zod';
@@ -45,15 +51,17 @@ export const signupQueue = defineQueue({
     email: z.string().email(),
     userId: z.string()
   }),
-  retry: 3,
-  retryDelay: '30s',
-  process: async (ctx, msg) => {
-    console.log('processing signup', ctx.message.id, msg.email, msg.userId);
+  process: async (ctx, message) => {
+    console.log(ctx.message.id, message.email, message.userId);
   }
 });
 ```
 
-## 5. Expose Worker Entry
+Expected output:
+
+- queue discovery picks up exported queue declaration
+
+## Step 4: Expose Worker Entry
 
 ```ts
 import { defineWorker } from './better-cf.config';
@@ -65,29 +73,42 @@ export default defineWorker({
 });
 ```
 
-## 6. Run Local Dev
+Expected output:
+
+- runtime entry remains focused on HTTP/scheduled handlers
+
+## Step 5: Run Dev and Deploy
 
 ```bash
 npm run dev
-```
-
-`better-cf dev` automation loop will:
-
-1. scan queue definitions
-2. validate queue config
-3. generate `.better-cf/entry.ts` and env types
-4. patch Wrangler queue mapping
-5. run/restart `wrangler dev`
-
-## 7. Deploy
-
-```bash
 npm run deploy
 ```
 
+Expected output:
+
+- local generation + `wrangler dev` loop runs
+- deploy runs generation first, then deploy command
+
+<div class="dx-callout">
+  <strong>Good to know:</strong> queue files can live in any folder path. Discovery is based on exported <code>defineQueue(...)</code> usage imported from <code>better-cf.config</code>.
+</div>
+
+## Troubleshooting
+
+### `NO_QUEUES_FOUND`
+
+Export your queue declaration and ensure `defineQueue` is imported from your `better-cf.config` module.
+
+### `REMOTE_QUEUE_DEV_UNSUPPORTED`
+
+Run `better-cf dev` without `--remote`.
+
+### Queue binding runtime errors
+
+Run the full generation workflow and confirm managed Wrangler queue sections are present.
+
 ## Next Steps
 
-- Understand package internals in [File Structure](/guides/file-structure)
-- Review more patterns in [Cookbook](/examples/cookbook)
-- Compare tradeoffs in [Cloudflare vs better-cf](/comparison/cloudflare-vs-better-cf)
-- Understand boundaries in [Limitations](/limitations)
+- Set up dependencies and project checks in [Installation & Prereqs](/guides/installation)
+- Build with full walkthrough detail in [Build Your First Queue](/guides/first-queue)
+- Learn producer/consumer design in [Producer Patterns](/guides/producer-patterns)
