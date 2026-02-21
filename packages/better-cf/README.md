@@ -96,16 +96,16 @@ const result = await testQueue(signupQueue, {
 expect(result.acked).toHaveLength(1);
 ```
 
-## Comparison with Cloudflare-Native Queue Workflows
+## Comparison with Cloudflare Queue Workflows
 
-| Concern | Cloudflare native path | better-cf path |
+| Concern | Cloudflare path | better-cf path |
 |---|---|---|
 | Queue contract shape | Convention/custom runtime checks | `defineQueue({ message: z.object(...) })` |
 | Entry + config wiring | Manual exports + Wrangler maintenance | Generated entry + automated Wrangler patching |
 | Local dev orchestration | Team-managed scripts | One `better-cf dev` loop |
 | Queue test harness | Custom mocks/harnesses | `testQueue` helper |
 
-Detailed comparison: `/apps/docs/src/content/docs/comparison/cloudflare-native-vs-better-cf.md`
+Detailed comparison: `/apps/docs/src/content/docs/comparison/cloudflare-vs-better-cf.md`
 
 ## Limitations
 

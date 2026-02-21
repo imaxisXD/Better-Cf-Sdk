@@ -25,8 +25,8 @@ export default defineConfig({
           label: 'Comparison',
           items: [
             {
-              label: 'Cloudflare Native vs better-cf',
-              link: '/comparison/cloudflare-native-vs-better-cf'
+              label: 'Cloudflare vs better-cf',
+              link: '/comparison/cloudflare-vs-better-cf'
             }
           ]
         },

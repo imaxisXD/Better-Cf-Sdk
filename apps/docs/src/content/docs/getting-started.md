@@ -84,5 +84,5 @@ npm run deploy
 ## Next Steps
 
 - Review more patterns in [Cookbook](/examples/cookbook)
-- Compare tradeoffs in [Cloudflare Native vs better-cf](/comparison/cloudflare-native-vs-better-cf)
+- Compare tradeoffs in [Cloudflare vs better-cf](/comparison/cloudflare-vs-better-cf)
 - Understand boundaries in [Limitations](/limitations)

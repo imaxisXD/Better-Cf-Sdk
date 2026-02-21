@@ -12,7 +12,7 @@ hero:
       link: /examples/cookbook
       variant: secondary
     - text: Compare Approaches
-      link: /comparison/cloudflare-native-vs-better-cf
+      link: /comparison/cloudflare-vs-better-cf
       variant: minimal
 ---
 

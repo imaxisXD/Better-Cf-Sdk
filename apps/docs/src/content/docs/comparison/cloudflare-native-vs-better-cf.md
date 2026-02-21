@@ -1,11 +1,11 @@
 ---
-title: Cloudflare Native vs better-cf
+title: Cloudflare vs better-cf
 description: A factual, opinionated comparison across workflow/DX and API shape.
 ---
 
 This page compares two ways to build queue-driven Workers:
 
-- **Cloudflare-native path**: raw Wrangler + Cloudflare queue docs workflow
+- **Cloudflare path**: raw Wrangler + Cloudflare queue docs workflow
 - **better-cf path**: opinionated SDK + automation CLI over those primitives
 
 The goal is not to replace Cloudflare concepts. The goal is to reduce manual wiring and improve team-level DX.
@@ -17,7 +17,7 @@ The goal is not to replace Cloudflare concepts. The goal is to reduce manual wir
     <thead>
       <tr>
         <th>Concern</th>
-        <th>Cloudflare-native flow</th>
+        <th>Cloudflare flow</th>
         <th>better-cf flow</th>
         <th>Why it matters</th>
       </tr>
@@ -25,31 +25,31 @@ The goal is not to replace Cloudflare concepts. The goal is to reduce manual wir
     <tbody>
       <tr>
         <td data-label="Concern"><strong>Queue contract definition</strong></td>
-        <td data-label="Cloudflare-native flow">You define payload shape by convention or custom runtime validation in handler code.</td>
+        <td data-label="Cloudflare flow">You define payload shape by convention or custom runtime validation in handler code.</td>
         <td data-label="better-cf flow">`defineQueue({ message: z.object(...) })` establishes contract and typed send/process usage.</td>
         <td data-label="Why it matters">Teams get one obvious source of truth for payload structure.</td>
       </tr>
       <tr>
         <td data-label="Concern"><strong>Entry and binding wiring</strong></td>
-        <td data-label="Cloudflare-native flow">Manual entry exports + wrangler consumer sections maintained by hand.</td>
+        <td data-label="Cloudflare flow">Manual entry exports + wrangler consumer sections maintained by hand.</td>
         <td data-label="better-cf flow">`better-cf dev/generate` scans queue exports, generates entry, and patches supported Wrangler configs.</td>
         <td data-label="Why it matters">Reduces config drift and repetitive maintenance.</td>
       </tr>
       <tr>
         <td data-label="Concern"><strong>Local dev loop</strong></td>
-        <td data-label="Cloudflare-native flow">You orchestrate your own watch/rebuild/update cycle.</td>
+        <td data-label="Cloudflare flow">You orchestrate your own watch/rebuild/update cycle.</td>
         <td data-label="better-cf flow">Single automation loop for scan → validate → generate → patch → run/restart.</td>
         <td data-label="Why it matters">One command for the common daily workflow.</td>
       </tr>
       <tr>
         <td data-label="Concern"><strong>Error messaging shape</strong></td>
-        <td data-label="Cloudflare-native flow">Errors vary by command/tooling context.</td>
+        <td data-label="Cloudflare flow">Errors vary by command/tooling context.</td>
         <td data-label="better-cf flow">CLI errors are normalized (`code`, `summary`, `details`, `hint`, optional docs URL).</td>
         <td data-label="Why it matters">Faster triage and easier onboarding.</td>
       </tr>
       <tr>
         <td data-label="Concern"><strong>Testing queue handlers</strong></td>
-        <td data-label="Cloudflare-native flow">You build custom harnesses or rely on broader integration setup.</td>
+        <td data-label="Cloudflare flow">You build custom harnesses or rely on broader integration setup.</td>
         <td data-label="better-cf flow">`testQueue` runs queue consumption logic directly in unit tests.</td>
         <td data-label="Why it matters">Shorter feedback loops for queue logic.</td>
       </tr>

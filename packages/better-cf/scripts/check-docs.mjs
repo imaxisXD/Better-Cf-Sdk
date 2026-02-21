@@ -9,7 +9,7 @@ const requiredFiles = [
   'apps/docs/src/content/docs/index.md',
   'apps/docs/src/content/docs/why-better-cf.md',
   'apps/docs/src/content/docs/getting-started.md',
-  'apps/docs/src/content/docs/comparison/cloudflare-native-vs-better-cf.md',
+  'apps/docs/src/content/docs/comparison/cloudflare-vs-better-cf.md',
   'apps/docs/src/content/docs/examples/cookbook.md',
   'apps/docs/src/content/docs/api/queue.md',
   'apps/docs/src/content/docs/api/testing.md',
@@ -31,7 +31,7 @@ const requiredReadmeSections = [
   '## Canonical Imports',
   '## Core Workflow',
   '## Example Patterns',
-  '## Comparison with Cloudflare-Native Queue Workflows',
+  '## Comparison with Cloudflare Queue Workflows',
   '## Limitations'
 ];
 

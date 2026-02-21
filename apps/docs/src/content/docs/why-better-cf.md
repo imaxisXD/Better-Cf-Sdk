@@ -34,7 +34,7 @@ The API surface is intentionally compact (`createSDK`, `defineQueue`, `defineWor
 
 ## What Opinionated Means Here
 
-`better-cf` chooses conventions to avoid common sources of drift, but still maps to Cloudflare-native primitives.
+`better-cf` chooses conventions to avoid common sources of drift, but still maps to Cloudflare primitives.
 
 - You can still reason in Wrangler terms.
 - The SDK does not hide Cloudflare concepts.
