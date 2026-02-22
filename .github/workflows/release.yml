@@ -18,7 +18,7 @@ permissions:
 
 jobs:
   release-stable:
-    if: github.ref_name == 'main'
+    if: github.ref_name == 'main' && github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     env:
       NPM_TAG: latest
@@ -32,13 +32,27 @@ jobs:
       - name: Ensure Rollup Linux native binary is installed
         run: npm install --no-save @rollup/rollup-linux-x64-gnu@$(node -p "require('./package-lock.json').packages['node_modules/rollup'].version")
       - run: npm run check
-      - name: Version / Publish (Changesets)
-        uses: changesets/action@v1
-        with:
-          version: npm run release:version
-          publish: npm run release:publish
+      - name: Version packages
+        id: version
+        run: |
+          npm run release:version
+          if [[ -n "$(git status --porcelain)" ]]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Commit version changes to main
+        if: steps.version.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Version Packages [skip ci]"
+          git push origin HEAD:${{ github.ref_name }}
+      - name: Publish packages
+        if: steps.version.outputs.changed == 'true'
+        run: npm run release:publish
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   release-alpha:
