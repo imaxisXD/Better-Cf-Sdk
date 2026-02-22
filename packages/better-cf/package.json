@@ -2,6 +2,14 @@
   "name": "better-cf",
   "version": "0.2.1",
   "description": "Type-safe Cloudflare Queue SDK and CLI",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/imaxisXD/Better-Cf-Sdk"
+  },
+  "homepage": "https://github.com/imaxisXD/Better-Cf-Sdk#readme",
+  "bugs": {
+    "url": "https://github.com/imaxisXD/Better-Cf-Sdk/issues"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
