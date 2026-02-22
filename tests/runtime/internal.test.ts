@@ -27,8 +27,10 @@ describe('queue internals', () => {
   it('throws for invalid multi-job config with no jobs', () => {
     const { defineQueue } = createSDK<Record<string, never>>();
 
+    const unsafeDefineQueue = defineQueue as (config: Record<string, unknown>) => unknown;
+
     expect(() =>
-      defineQueue({
+      unsafeDefineQueue({
         retry: 2
       })
     ).toThrow('Multi-job queue config must define at least one job.');

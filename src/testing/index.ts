@@ -3,15 +3,26 @@ import { getQueueInternals } from '../queue/internal.js';
 /**
  * Options for queue consumer tests.
  */
-export interface TestQueueOptions<E, TMessage> {
+interface TestQueueBaseOptions<E> {
   env: E;
-  /** Test one message. */
-  message?: TMessage;
-  /** Test many messages in one batch. */
-  messages?: TMessage[];
   /** Overrides message attempts metadata. */
   attempts?: number;
 }
+
+/**
+ * Options for queue consumer tests.
+ */
+export type TestQueueOptions<E, TMessage> =
+  | (TestQueueBaseOptions<E> & {
+      /** Test one message. */
+      message: TMessage;
+      messages?: never;
+    })
+  | (TestQueueBaseOptions<E> & {
+      /** Test many messages in one batch. */
+      messages: TMessage[];
+      message?: never;
+    });
 
 /**
  * Test execution result for queue consumers.
@@ -31,6 +42,10 @@ export async function testQueue<E, TMessage>(
   options: TestQueueOptions<E, TMessage>
 ): Promise<TestQueueResult<TMessage>> {
   const internals = getQueueInternals<E>(handle);
+
+  if ('message' in options && 'messages' in options) {
+    throw new Error('testQueue accepts either message or messages, not both.');
+  }
 
   const allMessages = options.messages ?? (options.message !== undefined ? [options.message] : []);
   if (allMessages.length === 0) {

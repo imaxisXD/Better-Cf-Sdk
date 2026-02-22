@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { createSDK } from '../../src/queue/index.js';
+import { testQueue } from '../../src/testing/index.js';
 
 type Env = {
   DB: D1Database;
@@ -42,6 +43,28 @@ signupQueue.sendBatch(
   { delay: '5m', contentType: 'json' }
 );
 
+const queueTestEnv = {
+  DB: {} as D1Database,
+  QUEUE_SIGNUP: {} as Queue
+};
+
+testQueue(signupQueue, {
+  env: queueTestEnv,
+  message: { email: 'ok@example.com', userId: 'abc' }
+});
+
+// @ts-expect-error testQueue requires exactly one of message/messages
+testQueue(signupQueue, {
+  env: queueTestEnv
+});
+
+// @ts-expect-error testQueue does not accept message and messages together
+testQueue(signupQueue, {
+  env: queueTestEnv,
+  message: { email: 'ok@example.com', userId: 'abc' },
+  messages: [{ email: 'ok@example.com', userId: 'abc' }]
+});
+
 // @ts-expect-error invalid content type
 const invalidSendOptions: Parameters<typeof signupQueue.send>[2] = { contentType: 'xml' };
 
@@ -75,33 +98,6 @@ const jobs = defineQueue({
     }
   },
   retry: 3
-});
-
-// @ts-expect-error multi-job queue keys must be job configs (or reserved config keys)
-defineQueue({
-  signup: {
-    message: z.object({ email: z.string() }),
-    process: async () => {
-      return;
-    }
-  },
-  typo: 123
-});
-
-// @ts-expect-error multi-job queue requires at least one job definition
-defineQueue({
-  retry: 2
-});
-
-// @ts-expect-error onFailure is only valid inside each job config in multi-job mode
-defineQueue({
-  signup: {
-    message: z.object({ email: z.string() }),
-    process: async () => {
-      return;
-    }
-  },
-  onFailure: async () => {}
 });
 
 jobs.signup.send(

@@ -231,37 +231,13 @@ export type ExtractJobMap<E, TConfig extends Record<string, unknown>> = {
 /**
  * Multi-job queue declaration object.
  */
-type MultiJobReservedKey =
-  | keyof QueueCommonConfig
-  | 'consumer'
-  | 'message'
-  | 'process'
-  | 'processBatch'
-  | 'onFailure';
-
-type EnforceMultiJobEntries<E, TConfig extends Record<string, unknown>> = {
-  [K in keyof TConfig]: K extends MultiJobReservedKey
-    ? TConfig[K]
-    : TConfig[K] extends AnyJobConfig<E>
-      ? TConfig[K]
-      : never;
-};
-
-type RequireAtLeastOneJob<TConfig extends Record<string, unknown>> = [
-  Exclude<keyof TConfig, MultiJobReservedKey>
-] extends [never]
-  ? never
-  : unknown;
-
 export type MultiJobQueueConfig<E, TConfig extends Record<string, unknown>> = QueueCommonConfig & {
   consumer?: never;
   message?: never;
   process?: never;
   processBatch?: never;
   onFailure?: never;
-} & TConfig &
-  EnforceMultiJobEntries<E, TConfig> &
-  RequireAtLeastOneJob<TConfig>;
+} & TConfig;
 
 /**
  * Producer handle for a single queue declaration.
