@@ -22,7 +22,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: npm ci --include=optional
+      - run: npm ci --include=dev --include=optional
       - run: npm run docs:build
       - uses: cloudflare/pages-action@v1
         with:
