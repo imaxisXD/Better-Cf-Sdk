@@ -25,9 +25,9 @@ tmp/
 .temp/
 
 # local convenience symlinks (source lives in packages/better-cf/*)
-examples
-fixtures
-tests
+/examples
+/fixtures
+/tests
 
 # environment secrets
 .env

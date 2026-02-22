@@ -1,0 +1,9 @@
+name = "toml-config"
+main = "worker.ts"
+compatibility_date = "2025-01-01"
+
+[vars]
+ENV = "dev"
+
+# --- better-cf:start ---
+# --- better-cf:end ---

@@ -1,0 +1,6 @@
+name = "multi-queue"
+main = "worker.ts"
+compatibility_date = "2025-01-01"
+
+# --- better-cf:start ---
+# --- better-cf:end ---

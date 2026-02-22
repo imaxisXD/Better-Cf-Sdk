@@ -1,0 +1,10 @@
+{
+  // test comment to ensure parser keeps unrelated values
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "jsonc-config",
+  "main": "worker.ts",
+  "compatibility_date": "2025-01-01",
+  "vars": {
+    "ENV": "dev"
+  }
+}
