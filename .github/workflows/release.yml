@@ -28,7 +28,7 @@ jobs:
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org
-      - run: npm ci --include=dev --include=optional
+      - run: npm install --include=dev --include=optional
       - name: Ensure Rollup Linux native binary is installed
         run: npm install --no-save @rollup/rollup-linux-x64-gnu@$(node -p "require('./package-lock.json').packages['node_modules/rollup'].version")
       - run: npm run check
@@ -52,7 +52,7 @@ jobs:
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org
-      - run: npm ci --include=dev --include=optional
+      - run: npm install --include=dev --include=optional
       - name: Ensure Rollup Linux native binary is installed
         run: npm install --no-save @rollup/rollup-linux-x64-gnu@$(node -p "require('./package-lock.json').packages['node_modules/rollup'].version")
       - run: npm run check

@@ -22,7 +22,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
-      - run: npm ci --include=dev --include=optional
+      - run: npm install --include=dev --include=optional
       - name: Validate wrangler CLI version
         run: npm exec --yes --package=wrangler@${{ matrix.wrangler }} -- wrangler --version
       - name: Ensure Rollup Linux native binary is installed
@@ -38,5 +38,5 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20.x
-      - run: npm ci --include=dev --include=optional
+      - run: npm install --include=dev --include=optional
       - run: npm run security:deps
