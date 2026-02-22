@@ -19,9 +19,35 @@ Use this reference to look up exact `better-cf` command names, required flags, a
 
 ## Step 1: Use Core Workflow Commands
 
+### `better-cf create [project-directory]`
+
+Create a new `better-cf` project scaffold in a new or empty target folder.
+
+Options:
+
+- `-y, --yes`: accept defaults and skip interactive prompts
+- `--no-install`: scaffold project files without installing dependencies
+- `--force`: allow scaffolding in a non-empty target folder
+- `--use-npm`: install with npm
+- `--use-pnpm`: install with pnpm
+- `--use-yarn`: install with yarn
+- `--use-bun`: install with bun
+
+Examples:
+
+```bash
+better-cf create my-worker
+better-cf create my-worker --no-install
+better-cf create my-worker --use-pnpm
+better-cf create my-worker --use-bun
+better-cf create . --force
+```
+
 ### `better-cf init`
 
-Initialize project files and baseline config.
+Initialize `better-cf` in the current project directory (in place).
+
+`init` does not create a new project folder. Use `create` for blank-project bootstrap.
 
 ### `better-cf generate`
 

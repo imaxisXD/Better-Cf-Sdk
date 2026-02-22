@@ -15,13 +15,14 @@ on:
 
 jobs:
   deploy:
+    if: ${{ false }} # Disabled while migrating docs away from Astro.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: npm install
+      - run: npm ci --include=optional
       - run: npm run docs:build
       - uses: cloudflare/pages-action@v1
         with:

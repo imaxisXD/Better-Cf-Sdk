@@ -14,6 +14,7 @@ Use the automation loop to keep queue declarations, generated files, and Wrangle
 ## Before You Start
 
 - complete [Install Queue SDK and Tooling](/guides/installation)
+- run `better-cf init` in an existing project or `better-cf create` for a new project
 - define at least one exported queue declaration
 - have Wrangler available in your workspace
 

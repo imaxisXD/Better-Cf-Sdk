@@ -11,13 +11,28 @@ Opinionated Cloudflare Queue SDK + automation CLI designed for modern developer 
 - structured automation for local dev and codegen
 - predictable runtime and testing APIs
 
-## Quickstart
+## Quickstart (Existing Project)
 
 ```bash
 npm i better-cf zod
 npm i -D wrangler @cloudflare/workers-types typescript
 npx better-cf init
 npm run dev
+```
+
+## Quickstart (New Project)
+
+```bash
+npx better-cf create my-worker
+cd my-worker
+npm run dev
+```
+
+Use a specific package manager during create:
+
+```bash
+npx better-cf create my-worker --use-pnpm
+npx better-cf create my-worker --use-bun
 ```
 
 ## Canonical Imports

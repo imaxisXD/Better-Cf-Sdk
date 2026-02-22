@@ -19,21 +19,24 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
-      - run: npm install
+      - run: npm ci --include=optional
       - run: npm install -D wrangler@${{ matrix.wrangler }} -w better-cf
+      - name: Ensure Rollup Linux native binary is installed
+        run: npm install --no-save @rollup/rollup-linux-x64-gnu@$(node -p "require('./node_modules/rollup/package.json').version")
       - run: npm run lint -w better-cf
       - run: npm run test -w better-cf
       - run: npm run test:types -w better-cf
       - run: npm run check:docs -w better-cf
 
   docs:
+    if: ${{ false }} # Disabled while migrating docs away from Astro.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20.x
-      - run: npm install
+      - run: npm ci --include=optional
       - run: npm run docs:build
 
   security:
@@ -43,5 +46,5 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20.x
-      - run: npm install
+      - run: npm ci --include=optional
       - run: npm run security:deps -w better-cf

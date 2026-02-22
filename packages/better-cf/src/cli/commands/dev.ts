@@ -51,7 +51,8 @@ export async function devCommand(options: DevOptions, rootDir = process.cwd()): 
 
   if (options.watch) {
     const watcher = createProjectWatcher(rootDir, {
-      ignored: ['node_modules', '.better-cf', 'dist'],
+      // Ignore Wrangler's local build output to avoid self-triggered rebuild loops.
+      ignored: ['node_modules', '.better-cf', '.wrangler', 'dist'],
       onRelevantChange: async (filePath) => {
         await buildAndRestart(`file changed: ${filePath}`);
       }

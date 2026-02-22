@@ -22,6 +22,7 @@ import { deployCommand } from './commands/deploy.js';
 import { devCommand } from './commands/dev.js';
 import { generateCommand } from './commands/generate.js';
 import { initCommand } from './commands/init.js';
+import { createCommand, type PackageManager } from './commands/create.js';
 import { CliError } from './errors.js';
 import { toCliError } from './errors.js';
 import { logger } from './logger.js';
@@ -30,6 +31,39 @@ export async function run(argv = process.argv.slice(2)): Promise<void> {
   const program = new Command();
 
   program.name('better-cf').description('better-cf queue SDK CLI').version('0.2.1');
+
+  program
+    .command('create [project-directory]')
+    .description('Create a new better-cf project')
+    .option('-y, --yes', 'Use defaults and skip prompts')
+    .option('--no-install', 'Skip dependency installation')
+    .option('--force', 'Allow creating in a non-empty directory')
+    .option('--use-npm', 'Use npm to install dependencies')
+    .option('--use-pnpm', 'Use pnpm to install dependencies')
+    .option('--use-yarn', 'Use yarn to install dependencies')
+    .option('--use-bun', 'Use bun to install dependencies')
+    .action(
+      async (
+        projectDirectory: string | undefined,
+        options: {
+          yes: boolean;
+          install: boolean;
+          force: boolean;
+          useNpm?: boolean;
+          usePnpm?: boolean;
+          useYarn?: boolean;
+          useBun?: boolean;
+        }
+      ) => {
+        const packageManager = resolveCreatePackageManager(options);
+        await createCommand(projectDirectory, {
+          yes: options.yes,
+          install: options.install,
+          force: options.force,
+          packageManager
+        });
+      }
+    );
 
   program.command('init').description('Initialize better-cf in the current project').action(async () => {
     await initCommand();
@@ -357,4 +391,36 @@ function parseBooleanOption(value: string): boolean {
     details: 'Expected true or false.',
     hint: 'Use --enabled true or --enabled false.'
   });
+}
+
+function resolveCreatePackageManager(options: {
+  useNpm?: boolean;
+  usePnpm?: boolean;
+  useYarn?: boolean;
+  useBun?: boolean;
+}): PackageManager | undefined {
+  const selected: PackageManager[] = [];
+
+  if (options.useNpm) {
+    selected.push('npm');
+  }
+  if (options.usePnpm) {
+    selected.push('pnpm');
+  }
+  if (options.useYarn) {
+    selected.push('yarn');
+  }
+  if (options.useBun) {
+    selected.push('bun');
+  }
+
+  if (selected.length > 1) {
+    throw new CliError({
+      code: 'INVALID_CLI_OPTION',
+      summary: 'Conflicting package manager flags.',
+      details: 'Use only one of --use-npm, --use-pnpm, --use-yarn, or --use-bun.'
+    });
+  }
+
+  return selected[0];
 }

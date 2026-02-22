@@ -14,7 +14,7 @@ Ship one working queue flow with typed payload validation and generated Cloudfla
 ## Before You Start
 
 - complete [Installation & Prereqs](/guides/installation)
-- `better-cf.config.ts` available from `better-cf init`
+- `better-cf.config.ts` available from `better-cf init` (existing project) or `better-cf create` (new project)
 - `worker.ts` available in project root
 
 ## Step 1: Define Queue SDK in `better-cf.config.ts`

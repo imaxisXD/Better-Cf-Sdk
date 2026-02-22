@@ -5,6 +5,11 @@ description: Ship your first typed queue in minutes using generated wiring and l
 
 Build one working queue consumer flow quickly, then branch into focused guides for production hardening.
 
+## Choose Your Start Point
+
+- Existing project: follow [Path A: Existing Worker Project](/guides/installation#path-a-existing-worker-project)
+- New project: follow [Path B: New Blank Project](/guides/installation#path-b-new-blank-project)
+
 ## What You Will Achieve
 
 - initialize Queue SDK in your project
@@ -19,8 +24,17 @@ Build one working queue consumer flow quickly, then branch into focused guides f
 
 ## Step 1: Initialize Project Files
 
+If you already have a Worker project:
+
 ```bash
 npx better-cf init
+```
+
+If you are starting from a blank project folder:
+
+```bash
+npx better-cf create my-worker
+cd my-worker
 ```
 
 Expected output:

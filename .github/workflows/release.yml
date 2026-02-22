@@ -23,7 +23,9 @@ jobs:
         with:
           node-version: 20
           registry-url: https://registry.npmjs.org
-      - run: npm install
+      - run: npm ci --include=optional
+      - name: Ensure Rollup Linux native binary is installed
+        run: npm install --no-save @rollup/rollup-linux-x64-gnu@$(node -p "require('./node_modules/rollup/package.json').version")
       - run: npm run check -w better-cf
       - name: Version / Publish (Changesets)
         uses: changesets/action@v1
@@ -45,7 +47,9 @@ jobs:
         with:
           node-version: 20
           registry-url: https://registry.npmjs.org
-      - run: npm install
+      - run: npm ci --include=optional
+      - name: Ensure Rollup Linux native binary is installed
+        run: npm install --no-save @rollup/rollup-linux-x64-gnu@$(node -p "require('./node_modules/rollup/package.json').version")
       - run: npm run check -w better-cf
       - run: npx changeset version --snapshot alpha
       - run: npm run build -w better-cf

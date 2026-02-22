@@ -8,18 +8,24 @@ Set up the minimum tooling needed to run Queue SDK locally and generate queue wi
 ## What You Will Achieve
 
 - install runtime and dev dependencies required by Queue SDK
-- initialize baseline project files with `better-cf init`
-- verify your local environment can run the docs workflow
+- choose the right onboarding flow for an existing project or a new blank project
+- verify your local environment can run the local generation + dev workflow
 
 ## Before You Start
 
 - Node.js `>=18.18`
-- an existing Worker project folder (or a new empty project)
 - `npm` available in your shell
 
-## Step 1: Install Runtime and Dev Dependencies
+## Choose Your Path
 
-Run:
+- [Path A: Existing Worker Project](#path-a-existing-worker-project)
+- [Path B: New Blank Project](#path-b-new-blank-project)
+
+## Path A: Existing Worker Project
+
+### Step 1: Install Runtime and Dev Dependencies
+
+Run in your existing Worker project folder:
 
 ```bash
 npm i better-cf zod
@@ -31,7 +37,7 @@ Expected output:
 - packages install successfully with no unresolved peer dependency errors
 - your `package.json` contains `better-cf` and `zod`
 
-## Step 2: Initialize better-cf Project Files
+### Step 2: Initialize better-cf Project Files In Place
 
 Run:
 
@@ -46,7 +52,7 @@ Expected output:
 - `.better-cf/` exists
 - `wrangler.toml` exists or is updated for managed queue mapping
 
-## Step 3: Verify Local Dev Loop
+### Step 3: Verify Local Dev Loop
 
 Run:
 
@@ -58,6 +64,29 @@ Expected output:
 
 - queue scanning and generation runs
 - `wrangler dev` starts after generation
+
+## Path B: New Blank Project
+
+Run:
+
+```bash
+npx better-cf create my-worker
+cd my-worker
+npm run dev
+```
+
+Expected output:
+
+- a new project folder is scaffolded
+- dependencies are installed (unless skipped)
+- local generation + `wrangler dev` starts from `npm run dev`
+
+Optional package manager flags:
+
+```bash
+npx better-cf create my-worker --use-pnpm
+npx better-cf create my-worker --use-bun
+```
 
 <div class="dx-callout">
   <strong>Good to know:</strong> queue definition files can live in any folder. Discovery is based on exported <code>defineQueue(...)</code> usage imported from <code>better-cf.config</code>, not folder name.
