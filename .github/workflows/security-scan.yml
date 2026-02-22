@@ -14,4 +14,4 @@ jobs:
         with:
           node-version: 20
       - run: npm ci --include=dev --include=optional
-      - run: npm run security:deps -w better-cf
+      - run: npm run security:deps

@@ -14,8 +14,8 @@ pnpm-debug.log*
 # build artifacts
 apps/docs/dist/
 **/.astro/
-packages/*/dist/
-packages/*/.tmp-tests/
+dist/
+.tmp-tests/
 coverage/
 *.tsbuildinfo
 
@@ -23,11 +23,6 @@ coverage/
 .better-cf/
 tmp/
 .temp/
-
-# local convenience symlinks (source lives in packages/better-cf/*)
-/examples
-/fixtures
-/tests
 
 # environment secrets
 .env
