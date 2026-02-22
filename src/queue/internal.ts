@@ -1,7 +1,13 @@
 import type { QueueDefinition } from './types.js';
 
+/**
+ * Symbol used to store non-enumerable queue internals on queue handles.
+ */
 export const kQueueInternals = Symbol.for('better-cf.queue.internals');
 
+/**
+ * Internal queue API used by runtime/testing/CLI internals.
+ */
 export interface QueueInternalApi<E> {
   setBinding(name: string): void;
   getBinding(): string | null;
@@ -13,6 +19,9 @@ export type QueueWithInternals<E> = {
   [kQueueInternals]: QueueInternalApi<E>;
 };
 
+/**
+ * Reads internal queue metadata from a queue handle.
+ */
 export function getQueueInternals<E>(value: unknown): QueueInternalApi<E> {
   if (!value || typeof value !== 'object') {
     throw new Error('Queue handle is not an object.');
@@ -26,6 +35,9 @@ export function getQueueInternals<E>(value: unknown): QueueInternalApi<E> {
   return internals;
 }
 
+/**
+ * Input module shape accepted when resolving worker handlers.
+ */
 export interface WorkerModuleLike {
   default?: unknown;
   fetch?: (request: Request, env: unknown, ctx: ExecutionContext) => Promise<Response>;
@@ -36,11 +48,17 @@ export interface WorkerModuleLike {
   ) => Promise<void>;
 }
 
+/**
+ * Normalized handler pair resolved from a worker module export.
+ */
 export interface ResolvedWorkerHandlers {
   fetch: (request: Request, env: unknown, ctx: ExecutionContext) => Promise<Response>;
   scheduled?: (event: ScheduledEvent, env: unknown, ctx: ExecutionContext) => Promise<void>;
 }
 
+/**
+ * Resolves `fetch`/`scheduled` handlers from various worker export styles.
+ */
 export function resolveWorkerHandlers(moduleLike: WorkerModuleLike): ResolvedWorkerHandlers {
   const root = moduleLike.default ?? moduleLike;
 

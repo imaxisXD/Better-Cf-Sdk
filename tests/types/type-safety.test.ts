@@ -77,6 +77,33 @@ const jobs = defineQueue({
   retry: 3
 });
 
+// @ts-expect-error multi-job queue keys must be job configs (or reserved config keys)
+defineQueue({
+  signup: {
+    message: z.object({ email: z.string() }),
+    process: async () => {
+      return;
+    }
+  },
+  typo: 123
+});
+
+// @ts-expect-error multi-job queue requires at least one job definition
+defineQueue({
+  retry: 2
+});
+
+// @ts-expect-error onFailure is only valid inside each job config in multi-job mode
+defineQueue({
+  signup: {
+    message: z.object({ email: z.string() }),
+    process: async () => {
+      return;
+    }
+  },
+  onFailure: async () => {}
+});
+
 jobs.signup.send(
   {
     env: {

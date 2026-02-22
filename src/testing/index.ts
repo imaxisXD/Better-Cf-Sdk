@@ -1,17 +1,31 @@
 import { getQueueInternals } from '../queue/internal.js';
 
+/**
+ * Options for queue consumer tests.
+ */
 export interface TestQueueOptions<E, TMessage> {
   env: E;
+  /** Test one message. */
   message?: TMessage;
+  /** Test many messages in one batch. */
   messages?: TMessage[];
+  /** Overrides message attempts metadata. */
   attempts?: number;
 }
 
+/**
+ * Test execution result for queue consumers.
+ */
 export interface TestQueueResult<TMessage> {
+  /** Messages acked by the consumer. */
   acked: TMessage[];
+  /** Messages retried by the consumer. */
   retried: TMessage[];
 }
 
+/**
+ * Runs a queue declaration's consumer logic in-memory for tests.
+ */
 export async function testQueue<E, TMessage>(
   handle: unknown,
   options: TestQueueOptions<E, TMessage>

@@ -6,6 +6,7 @@ import {
   type AnyPullQueueConfig,
   type AnyPushQueueConfig,
   type ExtractJobMap,
+  type DefineQueue,
   type JobConfig,
   type MultiJobQueueConfig,
   type MultiJobQueueHandle,
@@ -19,11 +20,20 @@ import {
 import { isPlainObject, mergeSendOptions, toCloudflareSendOptions } from './utils.js';
 import type { z } from 'zod';
 
-export function defineQueueFactory<E>() {
+/**
+ * Creates a typed `defineQueue` helper bound to the SDK env generic.
+ */
+export function defineQueueFactory<E>(): DefineQueue<E> {
+  /**
+   * Declare a single queue contract.
+   */
   function defineQueue<TSchema extends z.ZodTypeAny>(
     config: QueueConfig<E, TSchema>
   ): QueueHandle<E, z.infer<TSchema>>;
 
+  /**
+   * Declare a multi-job queue contract.
+   */
   function defineQueue<const TConfig extends Record<string, unknown>>(
     config: MultiJobQueueConfig<E, TConfig>
   ): MultiJobQueueHandle<E, ExtractJobMap<E, TConfig>>;
@@ -167,10 +177,16 @@ export function defineQueueFactory<E>() {
   return defineQueue;
 }
 
+/**
+ * Attaches the generated Cloudflare binding name to a queue handle.
+ */
 export function setQueueBinding<E>(handle: unknown, binding: string): void {
   getQueueInternals<E>(handle).setBinding(binding);
 }
 
+/**
+ * Reads normalized queue metadata from a queue handle.
+ */
 export function readQueueDefinition<E>(handle: unknown): QueueDefinition<E> {
   return getQueueInternals<E>(handle).getDefinition();
 }

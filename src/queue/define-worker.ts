@@ -1,7 +1,10 @@
-import type { QueueEnv, WorkerConfig } from './types.js';
+import type { DefineWorker, QueueEnv, WorkerConfig, WorkerEntrypoint } from './types.js';
 
-export function defineWorkerFactory<E>() {
-  return function defineWorker(config: WorkerConfig<E>) {
+/**
+ * Creates a typed `defineWorker` helper bound to the SDK env generic.
+ */
+export function defineWorkerFactory<E>(): DefineWorker<E> {
+  return function defineWorker(config: WorkerConfig<E>): WorkerEntrypoint<E> {
     return {
       async fetch(request: Request, env: E, executionCtx: ExecutionContext): Promise<Response> {
         return config.fetch(request, {
