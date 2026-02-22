@@ -1,6 +1,6 @@
 {
   "name": "better-cf",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Type-safe Cloudflare Queue SDK and CLI",
   "repository": {
     "type": "git",
