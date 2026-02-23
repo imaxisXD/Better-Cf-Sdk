@@ -8,6 +8,7 @@ export type {
   ContentType,
   ConsumerBatchEntry,
   DefineQueue,
+  DefineQueues,
   DefineWorker,
   Duration,
   JobConfig,

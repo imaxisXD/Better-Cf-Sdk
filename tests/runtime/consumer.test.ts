@@ -5,12 +5,12 @@ import { testQueue } from '../../src/testing/index.js';
 
 describe('consumer behavior', () => {
   it('acks valid messages and retries invalid payloads', async () => {
-    const process = vi.fn(async () => undefined);
+    const handler = vi.fn(async () => undefined);
 
     const { defineQueue } = createSDK<Record<string, unknown>>();
     const queue = defineQueue({
-      message: z.object({ id: z.string() }),
-      process
+      args: z.object({ id: z.string() }),
+      handler
     });
 
     const ok = await testQueue(queue, {
@@ -28,14 +28,14 @@ describe('consumer behavior', () => {
 
     expect(bad.acked).toHaveLength(0);
     expect(bad.retried).toHaveLength(1);
-    expect(process).toHaveBeenCalledTimes(1);
+    expect(handler).toHaveBeenCalledTimes(1);
   });
 
-  it('supports processBatch fallback ack behavior', async () => {
+  it('supports batchHandler fallback ack behavior', async () => {
     const { defineQueue } = createSDK<Record<string, unknown>>();
     const queue = defineQueue({
-      message: z.object({ id: z.string() }),
-      async processBatch() {
+      args: z.object({ id: z.string() }),
+      async batchHandler() {
         return;
       }
     });
@@ -49,12 +49,12 @@ describe('consumer behavior', () => {
     expect(result.retried).toHaveLength(0);
   });
 
-  it('supports processBatch explicit retryAll without auto-ack', async () => {
+  it('supports batchHandler explicit retryAll without auto-ack', async () => {
     const { defineQueue } = createSDK<Record<string, unknown>>();
 
     const queue = defineQueue({
-      message: z.object({ id: z.string() }),
-      async processBatch(ctx) {
+      args: z.object({ id: z.string() }),
+      async batchHandler(ctx) {
         ctx.batch.retryAll();
       }
     });
@@ -71,11 +71,11 @@ describe('consumer behavior', () => {
   it('routes multi-job payloads and retries unknown jobs', async () => {
     const signup = vi.fn(async () => undefined);
 
-    const { defineQueue } = createSDK<Record<string, unknown>>();
-    const queue = defineQueue({
+    const { defineQueues } = createSDK<Record<string, unknown>>();
+    const queue = defineQueues({
       signup: {
-        message: z.object({ email: z.string() }),
-        process: signup
+        args: z.object({ email: z.string() }),
+        handler: signup
       },
       retryDelay: '5s'
     });
@@ -101,7 +101,7 @@ describe('consumer behavior', () => {
   it('acks worker batch when queue is configured as http_pull', async () => {
     const { defineQueue } = createSDK<Record<string, unknown>>();
     const queue = defineQueue({
-      message: z.object({ id: z.string() }),
+      args: z.object({ id: z.string() }),
       consumer: {
         type: 'http_pull'
       }

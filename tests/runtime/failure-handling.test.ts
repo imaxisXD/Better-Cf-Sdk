@@ -19,9 +19,9 @@ describe('failure handling', () => {
 
     const { defineQueue } = createSDK<Record<string, never>>();
     const queue = defineQueue({
-      message: z.object({ id: z.string() }),
+      args: z.object({ id: z.string() }),
       retryDelay: '9s',
-      process: async () => {
+      handler: async () => {
         throw new Error('boom');
       },
       onFailure
@@ -53,14 +53,14 @@ describe('failure handling', () => {
     expect(retry).toHaveBeenCalledWith({ delaySeconds: 9 });
   });
 
-  it('calls onFailure and retries all in processBatch failure mode', async () => {
+  it('calls onFailure and retries all in batchHandler failure mode', async () => {
     const onFailure = vi.fn(async () => undefined);
 
     const { defineQueue } = createSDK<Record<string, never>>();
     const queue = defineQueue({
-      message: z.object({ id: z.string() }),
+      args: z.object({ id: z.string() }),
       retryDelay: '7s',
-      processBatch: async () => {
+      batchHandler: async () => {
         throw new Error('batch-fail');
       },
       onFailure
@@ -88,5 +88,44 @@ describe('failure handling', () => {
 
     expect(onFailure).toHaveBeenCalledTimes(1);
     expect(retryAll).toHaveBeenCalledWith({ delaySeconds: 7 });
+  });
+
+  it('retries whole batch when batch payload validation fails', async () => {
+    const onFailure = vi.fn(async () => undefined);
+    const batchHandler = vi.fn(async () => undefined);
+
+    const { defineQueue } = createSDK<Record<string, never>>();
+    const queue = defineQueue({
+      args: z.object({ id: z.string() }),
+      retryDelay: '4s',
+      batchHandler,
+      onFailure
+    });
+
+    const retryAll = vi.fn();
+    const ackAll = vi.fn();
+
+    const batch: MessageBatch<unknown> = {
+      queue: 'test-queue',
+      messages: [
+        {
+          id: 'm1',
+          timestamp: new Date(),
+          attempts: 1,
+          body: { id: 123 },
+          ack: vi.fn(),
+          retry: vi.fn()
+        }
+      ],
+      ackAll,
+      retryAll
+    };
+
+    await getQueueInternals(queue).consume(batch, {}, executionCtx);
+
+    expect(batchHandler).not.toHaveBeenCalled();
+    expect(onFailure).toHaveBeenCalledTimes(1);
+    expect(ackAll).not.toHaveBeenCalled();
+    expect(retryAll).toHaveBeenCalledWith({ delaySeconds: 4 });
   });
 });

@@ -49,7 +49,7 @@ Expected output:
 
 Supported queue consumer modes:
 
-- worker consumer mode (`process` / `processBatch`)
+- worker consumer mode (`handler` / `batchHandler`)
 - `http_pull` configuration mode (no in-worker pull runtime abstraction)
 
 Framework note:

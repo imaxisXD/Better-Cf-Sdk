@@ -38,7 +38,7 @@ Compare these two implementation paths for queue-driven Worker development:
       <tr>
         <td data-label="Concern"><strong>Queue contract definition</strong></td>
         <td data-label="Cloudflare flow">Payload shape is defined by convention or custom validation in handlers.</td>
-        <td data-label="better-cf flow"><code>defineQueue(&#123; message: z.object(...) &#125;)</code> centralizes contract and typed producer/consumer usage.</td>
+        <td data-label="better-cf flow"><code>defineQueue(&#123; args: z.object(...) &#125;)</code> centralizes contract and typed producer/consumer usage.</td>
         <td data-label="Why it matters">One source of truth for message shape.</td>
       </tr>
       <tr>
@@ -178,10 +178,10 @@ type Env = { QUEUE_SIGNUP: Queue };
 const { defineQueue, defineWorker } = createSDK<Env>();
 
 export const signupQueue = defineQueue({
-  message: z.object({ email: z.string().email(), userId: z.string() }),
+  args: z.object({ email: z.string().email(), userId: z.string() }),
   retry: 3,
   retryDelay: '30s',
-  process: async ({ env }, message) => {
+  handler: async ({ env }, message) => {
     await handleSignup(env, message);
   }
 });

@@ -7,15 +7,15 @@ type Env = {
   QUEUE_SIGNUP: Queue;
 };
 
-const { defineQueue } = createSDK<Env>();
+const { defineQueue, defineQueues } = createSDK<Env>();
 const { defineQueue: defineQueueAuto } = createSDK();
 
 const signupQueue = defineQueue({
-  message: z.object({
+  args: z.object({
     email: z.string().email(),
     userId: z.string()
   }),
-  process: async (ctx, msg) => {
+  handler: async (ctx, msg) => {
     ctx.env.DB;
     msg.email;
   }
@@ -75,8 +75,8 @@ const invalidDelay: Parameters<typeof signupQueue.send>[2] = { delay: 'forever' 
 const invalidSignupPayload: Parameters<typeof signupQueue.send>[1] = { email: 'ok@example.com' };
 
 const autoQueue = defineQueueAuto({
-  message: z.object({ id: z.string() }),
-  process: async (ctx, msg) => {
+  args: z.object({ id: z.string() }),
+  handler: async (ctx, msg) => {
     ctx.env.ANY_BINDING;
     msg.id;
   }
@@ -84,20 +84,40 @@ const autoQueue = defineQueueAuto({
 
 autoQueue.send({ env: {} }, { id: 'x' });
 
-const jobs = defineQueue({
+const jobs = defineQueues({
   signup: {
-    message: z.object({ email: z.string() }),
-    process: async () => {
+    args: z.object({ email: z.string() }),
+    handler: async () => {
       return;
     }
   },
   invoice: {
-    message: z.object({ amount: z.number() }),
-    process: async () => {
+    args: z.object({ amount: z.number() }),
+    handler: async () => {
       return;
     }
   },
   retry: 3
+});
+
+defineQueue({
+  // @ts-expect-error defineQueue is single-queue only
+  signup: {
+    args: z.object({ email: z.string() }),
+    handler: async () => {
+      return;
+    }
+  },
+  retry: 2
+});
+
+defineQueues({
+  // @ts-expect-error defineQueues is multi-job only
+  args: z.object({ id: z.string() }),
+  // @ts-expect-error defineQueues is multi-job only
+  handler: async () => {
+    return;
+  }
 });
 
 jobs.signup.send(
@@ -114,7 +134,7 @@ jobs.signup.send(
 const invalidInvoicePayload: Parameters<typeof jobs.invoice.send>[1] = { email: 'x@example.com' };
 
 const pullQueue = defineQueue({
-  message: z.object({ id: z.string() }),
+  args: z.object({ id: z.string() }),
   consumer: { type: 'http_pull' }
 });
 
@@ -128,11 +148,11 @@ pullQueue.send(
   { id: '123' }
 );
 
-// @ts-expect-error pull consumers cannot define process
+// @ts-expect-error pull consumers cannot define handler
 defineQueue({
-  message: z.object({ id: z.string() }),
+  args: z.object({ id: z.string() }),
   consumer: { type: 'http_pull' },
-  process: async () => {}
+  handler: async () => {}
 });
 
 // @ts-expect-error internal methods are not public API

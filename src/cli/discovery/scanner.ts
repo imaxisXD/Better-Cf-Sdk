@@ -18,11 +18,16 @@ const RESERVED_KEYS = new Set([
   'visibilityTimeout',
   'batch',
   'consumer',
+  'args',
+  'handler',
+  'batchHandler',
   'message',
   'process',
   'processBatch',
   'onFailure'
 ]);
+
+const DEFINE_QUEUE_HELPERS = new Set(['defineQueue', 'defineQueues']);
 
 export async function scanQueues(config: CliConfig): Promise<DiscoveryResult> {
   const diagnostics: DiscoveryDiagnostic[] = [];
@@ -110,7 +115,7 @@ export async function scanQueues(config: CliConfig): Promise<DiscoveryResult> {
     diagnostics.push({
       level: 'warning',
       code: 'NO_QUEUES_FOUND',
-      message: 'No defineQueue exports found in this project.'
+      message: 'No defineQueue/defineQueues exports found in this project.'
     });
   }
 
@@ -163,7 +168,7 @@ function collectSourceFiles(rootDir: string, ignore: string[]): string[] {
 
       if (entry.name.endsWith('.ts') || entry.name.endsWith('.tsx')) {
         const content = fs.readFileSync(absolutePath, 'utf8');
-        if (content.includes('defineQueue')) {
+        if (content.includes('defineQueue') || content.includes('defineQueues')) {
           files.push(absolutePath);
         }
       }
@@ -184,7 +189,7 @@ function getDefineQueueLocalNames(sourceFile: import('ts-morph').SourceFile): Se
     }
 
     for (const namedImport of importDecl.getNamedImports()) {
-      if (namedImport.getName() !== 'defineQueue') {
+      if (!DEFINE_QUEUE_HELPERS.has(namedImport.getName())) {
         continue;
       }
       names.add(namedImport.getAliasNode()?.getText() ?? namedImport.getName());
@@ -232,21 +237,21 @@ function extractQueueConfig(
   const firstArg = call.getArguments()[0];
   if (!firstArg || firstArg.getKind() !== SyntaxKind.ObjectLiteralExpression) {
     return {
-      hasProcess: false,
-      hasProcessBatch: false,
+      hasHandler: false,
+      hasBatchHandler: false,
       isMultiJob: false
     };
   }
 
   const objectLiteral = firstArg as ObjectLiteralExpression;
-  const hasProcess = hasProperty(objectLiteral, 'process');
-  const hasProcessBatch = hasProperty(objectLiteral, 'processBatch');
+  const hasHandler = hasProperty(objectLiteral, 'handler');
+  const hasBatchHandler = hasProperty(objectLiteral, 'batchHandler');
 
-  if (hasProcess && hasProcessBatch) {
+  if (hasHandler && hasBatchHandler) {
     diagnostics.push({
       level: 'error',
-      code: 'INVALID_PROCESS_MODE',
-      message: 'Queue config cannot include both process and processBatch.',
+      code: 'INVALID_HANDLER_MODE',
+      message: 'Queue config cannot include both handler and batchHandler.',
       filePath: path.relative(rootDir, absolutePath),
       hint: 'Pick exactly one processing mode for worker consumers.'
     });
@@ -292,7 +297,7 @@ function extractQueueConfig(
     : undefined;
 
   let isMultiJob = false;
-  if (!hasProcess && !hasProcessBatch) {
+  if (!hasHandler && !hasBatchHandler) {
     for (const property of objectLiteral.getProperties()) {
       if (!Node.isPropertyAssignment(property)) {
         continue;
@@ -309,7 +314,7 @@ function extractQueueConfig(
       }
 
       const jobObject = initializer as ObjectLiteralExpression;
-      if (hasProperty(jobObject, 'message') && hasProperty(jobObject, 'process')) {
+      if (hasProperty(jobObject, 'args') && hasProperty(jobObject, 'handler')) {
         isMultiJob = true;
         break;
       }
@@ -318,13 +323,13 @@ function extractQueueConfig(
 
   const relativeFile = path.relative(rootDir, absolutePath);
 
-  if (consumerType === 'http_pull' && (hasProcess || hasProcessBatch)) {
+  if (consumerType === 'http_pull' && (hasHandler || hasBatchHandler)) {
     diagnostics.push({
       level: 'error',
       code: 'INVALID_PULL_MODE_HANDLER',
-      message: 'Queue with consumer.type="http_pull" cannot include process/processBatch.',
+      message: 'Queue with consumer.type="http_pull" cannot include handler/batchHandler.',
       filePath: relativeFile,
-      hint: 'Remove process handlers for pull consumers and consume via HTTP pull APIs.'
+      hint: 'Remove handlers for pull consumers and consume via HTTP pull APIs.'
     });
   }
 
@@ -348,8 +353,8 @@ function extractQueueConfig(
     maxConcurrency,
     visibilityTimeout,
     consumerType,
-    hasProcess,
-    hasProcessBatch,
+    hasHandler,
+    hasBatchHandler,
     isMultiJob
   };
 }

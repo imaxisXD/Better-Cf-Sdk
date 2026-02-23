@@ -53,12 +53,12 @@ type Env = {
 export const { defineQueue, defineWorker } = createSDK<Env>();
 ```
 
-## Step 2: Define a Push Queue (`process`)
+## Step 2: Define a Push Queue (`handler`)
 
 ### Signature (single-message push mode)
 
 ```ts
-defineQueue({
+defineQueues({
   message,
   process,
   onFailure?,
@@ -81,10 +81,10 @@ QueueHandle<E, Message>
 
 ```ts
 const signupQueue = defineQueue({
-  message: z.object({ email: z.string().email() }),
+  args: z.object({ email: z.string().email() }),
   retry: 3,
   retryDelay: '30s',
-  process: async (ctx, message) => {
+  handler: async (ctx, message) => {
     console.log(ctx.message.id, message.email);
   },
   onFailure: async (ctx, message, error) => {
@@ -93,14 +93,14 @@ const signupQueue = defineQueue({
 });
 ```
 
-## Step 3: Define a Batch Queue (`processBatch`)
+## Step 3: Define a Batch Queue (`batchHandler`)
 
 ### Signature (batch push mode)
 
 ```ts
 defineQueue({
   message,
-  processBatch,
+  batchHandler,
   onFailure?,
   batch?: { maxSize?, timeout?, maxConcurrency? },
   retry?,
@@ -121,9 +121,9 @@ QueueHandle<E, Message>
 
 ```ts
 const auditQueue = defineQueue({
-  message: z.object({ action: z.string() }),
+  args: z.object({ action: z.string() }),
   batch: { maxSize: 10, timeout: '30s', maxConcurrency: 2 },
-  processBatch: async (ctx, messages) => {
+  batchHandler: async (ctx, messages) => {
     console.log(messages.length, ctx.batch.queue);
     ctx.batch.ackAll();
   }
@@ -155,7 +155,7 @@ QueueHandle<E, Message>
 
 ```ts
 const pullQueue = defineQueue({
-  message: z.object({ id: z.string() }),
+  args: z.object({ id: z.string() }),
   consumer: { type: 'http_pull', visibilityTimeout: '30s' },
   retry: 5,
   deadLetter: 'pull-dlq'
@@ -190,17 +190,17 @@ MultiJobQueueHandle<E, Jobs>
 ### Example
 
 ```ts
-const jobsQueue = defineQueue({
+const jobsQueue = defineQueues({
   retry: 2,
   signup: {
-    message: z.object({ email: z.string().email() }),
-    process: async (ctx, message) => {
+    args: z.object({ email: z.string().email() }),
+    handler: async (ctx, message) => {
       console.log(ctx.message.id, message.email);
     }
   },
   invoice: {
-    message: z.object({ amount: z.number() }),
-    process: async (ctx, message) => {
+    args: z.object({ amount: z.number() }),
+    handler: async (ctx, message) => {
       console.log(ctx.message.id, message.amount);
     }
   }
@@ -266,13 +266,13 @@ export default defineWorker({
 ```
 
 <div class="dx-callout">
-  <strong>Good to know:</strong> queue config fails fast for invalid combinations. Example: both <code>process</code> and <code>processBatch</code>, push handlers in pull mode, or zero-job multi-queue definitions.
+  <strong>Good to know:</strong> queue config fails fast for invalid combinations. Example: both <code>process</code> and <code>batchHandler</code>, push handlers in pull mode, or zero-job multi-queue definitions.
 </div>
 
 ## Constraints
 
-- push mode requires exactly one of `process` or `processBatch`
-- pull mode cannot include `process`, `processBatch`, or `onFailure`
+- push mode requires exactly one of `handler` or `batchHandler`
+- pull mode cannot include `handler`, `batchHandler`, or `onFailure`
 - multi-job mode requires at least one job object
 - queue binding injection depends on generated wiring (`dev`, `generate`, or `deploy` flow)
 

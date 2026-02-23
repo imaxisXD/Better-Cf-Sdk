@@ -6,8 +6,8 @@ import { testQueue } from '../../src/testing/index.js';
 describe('testQueue option validation', () => {
   const { defineQueue } = createSDK<Record<string, unknown>>();
   const queue = defineQueue({
-    message: z.object({ id: z.string() }),
-    async process() {
+    args: z.object({ id: z.string() }),
+    async handler() {
       return;
     }
   });

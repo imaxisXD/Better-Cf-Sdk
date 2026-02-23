@@ -12,8 +12,8 @@ describe('queue internals', () => {
   it('stores internals as non-enumerable symbol', () => {
     const { defineQueue } = createSDK<Record<string, never>>();
     const queue = defineQueue({
-      message: z.object({ id: z.string() }),
-      process: async () => {
+      args: z.object({ id: z.string() }),
+      handler: async () => {
         return;
       }
     });
@@ -25,12 +25,12 @@ describe('queue internals', () => {
   });
 
   it('throws for invalid multi-job config with no jobs', () => {
-    const { defineQueue } = createSDK<Record<string, never>>();
+    const { defineQueues } = createSDK<Record<string, never>>();
 
-    const unsafeDefineQueue = defineQueue as (config: Record<string, unknown>) => unknown;
+    const unsafeDefineQueues = defineQueues as (config: Record<string, unknown>) => unknown;
 
     expect(() =>
-      unsafeDefineQueue({
+      unsafeDefineQueues({
         retry: 2
       })
     ).toThrow('Multi-job queue config must define at least one job.');

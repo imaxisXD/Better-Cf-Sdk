@@ -46,8 +46,11 @@ export type SendBatchOptions = SendOptions;
  * Per-message input for `sendBatch`.
  */
 export interface SendBatchEntry<T> {
+  /** Payload to enqueue. */
   data: T;
+  /** Per-message delay override (takes precedence over batch-level `options.delay`). */
   delay?: Duration;
+  /** Per-message content type override (takes precedence over batch-level `options.contentType`). */
   contentType?: ContentType;
 }
 
@@ -55,12 +58,19 @@ export interface SendBatchEntry<T> {
  * Context passed to per-message queue consumers.
  */
 export interface QueueContext<E> {
+  /** Queue-aware runtime environment (`env` + generated bindings). */
   env: QueueEnv<E>;
+  /** Cloudflare execution context. */
   executionCtx: ExecutionContext;
+  /** Metadata for the currently processed message. */
   message: {
+    /** Unique Cloudflare queue message id. */
     id: string;
+    /** Message enqueue timestamp. */
     timestamp: Date;
+    /** Delivery attempt count for this message. */
     attempts: number;
+    /** Queue name currently being consumed. */
     queue: string;
   };
 }
@@ -69,13 +79,21 @@ export interface QueueContext<E> {
  * Context passed to batch queue consumers.
  */
 export interface BatchContext<E> {
+  /** Queue-aware runtime environment (`env` + generated bindings). */
   env: QueueEnv<E>;
+  /** Cloudflare execution context. */
   executionCtx: ExecutionContext;
+  /** Batch metadata + helpers for explicit ack/retry control. */
   batch: {
+    /** Queue name currently being consumed. */
     queue: string;
+    /** When the batch was received by this worker invocation. */
     receivedAt: Date;
+    /** Timestamp of first message in this batch (if present). */
     firstMessageTimestamp?: Date;
+    /** Ack every message in the current batch. */
     ackAll: () => void;
+    /** Retry every message in the current batch. */
     retryAll: (options?: { delaySeconds?: number }) => void;
   };
 }
@@ -84,7 +102,9 @@ export interface BatchContext<E> {
  * Context passed to worker handlers.
  */
 export interface WorkerContext<E> {
+  /** Queue-aware runtime environment (`env` + generated bindings). */
   env: QueueEnv<E>;
+  /** Cloudflare execution context. */
   executionCtx: ExecutionContext;
 }
 
@@ -92,9 +112,13 @@ export interface WorkerContext<E> {
  * Message shape received by batch consumers.
  */
 export interface ConsumerBatchEntry<T> {
+  /** Validated payload data. */
   data: T;
+  /** Unique Cloudflare queue message id. */
   id: string;
+  /** Message enqueue timestamp. */
   timestamp: Date;
+  /** Delivery attempt count for this message. */
   attempts: number;
 }
 
@@ -114,8 +138,11 @@ export interface QueueCommonConfig {
   visibilityTimeout?: Duration;
   /** Batch processing tuning (worker consumer mode only). */
   batch?: {
+    /** Maximum number of messages per delivered batch. */
     maxSize?: number;
+    /** Maximum time to wait before delivering a partial batch. */
     timeout?: Duration;
+    /** Maximum concurrent batch invocations. */
     maxConcurrency?: number;
   };
 }
@@ -126,24 +153,24 @@ export interface QueueCommonConfig {
 export interface PullConsumerConfig {
   /** Pull mode marker. */
   type: 'http_pull';
-  /** Pull visibility timeout in seconds. */
+  /** Pull visibility timeout (seconds or duration shorthand). */
   visibilityTimeout?: Duration;
 }
 
 /**
  * Per-message queue handler.
  */
-export type QueueProcessHandler<E, TSchema extends z.ZodTypeAny> = (
+export type QueueHandler<E, TSchema extends z.ZodTypeAny> = (
   ctx: QueueContext<E>,
-  message: z.infer<TSchema>
+  args: z.infer<TSchema>
 ) => Promise<void>;
 
 /**
  * Batch queue handler.
  */
-export type QueueBatchProcessHandler<E, TSchema extends z.ZodTypeAny> = (
+export type QueueBatchHandler<E, TSchema extends z.ZodTypeAny> = (
   ctx: BatchContext<E>,
-  messages: ConsumerBatchEntry<z.infer<TSchema>>[]
+  args: ConsumerBatchEntry<z.infer<TSchema>>[]
 ) => Promise<void>;
 
 /**
@@ -151,7 +178,7 @@ export type QueueBatchProcessHandler<E, TSchema extends z.ZodTypeAny> = (
  */
 export type QueueFailureHandler<E, TSchema extends z.ZodTypeAny> = (
   ctx: QueueContext<E> | BatchContext<E>,
-  message: z.infer<TSchema> | null,
+  args: z.infer<TSchema> | null,
   error: Error
 ) => Promise<void>;
 
@@ -159,10 +186,15 @@ export type QueueFailureHandler<E, TSchema extends z.ZodTypeAny> = (
  * Worker-consumer queue with per-message processing.
  */
 export type QueueProcessConfig<E, TSchema extends z.ZodTypeAny> = QueueCommonConfig & {
-  message: TSchema;
+  /** Zod schema used to validate each incoming payload. */
+  args: TSchema;
+  /** Optional explicit worker consumer marker. */
   consumer?: { type?: 'worker' };
-  process: QueueProcessHandler<E, TSchema>;
-  processBatch?: never;
+  /** Per-message push handler. */
+  handler: QueueHandler<E, TSchema>;
+  /** Not allowed in single-message mode. */
+  batchHandler?: never;
+  /** Optional failure hook when `handler` throws or payload validation fails. */
   onFailure?: QueueFailureHandler<E, TSchema>;
 };
 
@@ -170,10 +202,15 @@ export type QueueProcessConfig<E, TSchema extends z.ZodTypeAny> = QueueCommonCon
  * Worker-consumer queue with batch processing.
  */
 export type QueueBatchConfig<E, TSchema extends z.ZodTypeAny> = QueueCommonConfig & {
-  message: TSchema;
+  /** Zod schema used to validate each payload before `batchHandler` runs. */
+  args: TSchema;
+  /** Optional explicit worker consumer marker. */
   consumer?: { type?: 'worker' };
-  process?: never;
-  processBatch: QueueBatchProcessHandler<E, TSchema>;
+  /** Not allowed in batch mode. */
+  handler?: never;
+  /** Batch push handler. */
+  batchHandler: QueueBatchHandler<E, TSchema>;
+  /** Optional failure hook when `batchHandler` throws or batch validation fails. */
   onFailure?: QueueFailureHandler<E, TSchema>;
 };
 
@@ -184,12 +221,19 @@ export type QueuePullConfig<E, TSchema extends z.ZodTypeAny> = Omit<
   QueueCommonConfig,
   'visibilityTimeout' | 'batch'
 > & {
-  message: TSchema;
+  /** Zod schema for producer payload typing in pull mode. */
+  args: TSchema;
+  /** Required pull consumer configuration. */
   consumer: PullConsumerConfig;
+  /** Not allowed in pull mode. */
   batch?: never;
+  /** Not allowed in pull mode. */
   visibilityTimeout?: never;
-  process?: never;
-  processBatch?: never;
+  /** Not allowed in pull mode. */
+  handler?: never;
+  /** Not allowed in pull mode. */
+  batchHandler?: never;
+  /** Not allowed in pull mode. */
   onFailure?: never;
 };
 
@@ -205,11 +249,14 @@ export type QueueConfig<E, TSchema extends z.ZodTypeAny> =
  * Per-job declaration inside a multi-job queue.
  */
 export interface JobConfig<E, TSchema extends z.ZodTypeAny> {
-  message: TSchema;
-  process: (ctx: QueueContext<E>, message: z.infer<TSchema>) => Promise<void>;
+  /** Zod schema used to validate this job's payload. */
+  args: TSchema;
+  /** Job handler for this job key. */
+  handler: (ctx: QueueContext<E>, args: z.infer<TSchema>) => Promise<void>;
+  /** Optional failure hook for this job handler. */
   onFailure?: (
     ctx: QueueContext<E>,
-    message: z.infer<TSchema>,
+    args: z.infer<TSchema>,
     error: Error
   ) => Promise<void>;
 }
@@ -232,10 +279,15 @@ export type ExtractJobMap<E, TConfig extends Record<string, unknown>> = {
  * Multi-job queue declaration object.
  */
 export type MultiJobQueueConfig<E, TConfig extends Record<string, unknown>> = QueueCommonConfig & {
+  /** Not allowed at top level in multi-job mode; define `args` per job key. */
   consumer?: never;
-  message?: never;
-  process?: never;
-  processBatch?: never;
+  /** Not allowed at top level in multi-job mode; define `args` per job key. */
+  args?: never;
+  /** Not allowed at top level in multi-job mode; define `handler` per job key. */
+  handler?: never;
+  /** Not allowed in multi-job mode. */
+  batchHandler?: never;
+  /** Not allowed at top level in multi-job mode; define `onFailure` per job key. */
   onFailure?: never;
 } & TConfig;
 
@@ -264,13 +316,13 @@ export type MultiJobQueueHandle<
     /** Sends one message to a named job. */
     send(
       ctx: { env: QueueEnv<E> },
-      data: z.infer<TJobs[K]['message']>,
+      data: z.infer<TJobs[K]['args']>,
       options?: SendOptions
     ): Promise<void>;
     /** Sends many messages to a named job. */
     sendBatch(
       ctx: { env: QueueEnv<E> },
-      messages: SendBatchEntry<z.infer<TJobs[K]['message']>>[],
+      messages: SendBatchEntry<z.infer<TJobs[K]['args']>>[],
       options?: SendBatchOptions
     ): Promise<void>;
   };
@@ -290,7 +342,9 @@ export interface WorkerConfig<E> {
  * Worker module shape returned by `defineWorker`.
  */
 export interface WorkerEntrypoint<E> {
+  /** Cloudflare module `fetch` entrypoint. */
   fetch(request: Request, env: E, executionCtx: ExecutionContext): Promise<Response>;
+  /** Optional Cloudflare module `scheduled` entrypoint. */
   scheduled?: (event: ScheduledEvent, env: E, executionCtx: ExecutionContext) => Promise<void>;
 }
 
@@ -300,7 +354,7 @@ export interface WorkerEntrypoint<E> {
 export type DefineWorker<E> = (config: WorkerConfig<E>) => WorkerEntrypoint<E>;
 
 /**
- * Defines queue contracts and returns typed producer handles.
+ * Defines a single queue contract and returns a typed producer handle.
  */
 export interface DefineQueue<E> {
   /**
@@ -308,20 +362,31 @@ export interface DefineQueue<E> {
    *
    * @example
    * defineQueue({
-   *   message: z.object({ id: z.string() }),
-   *   process: async (ctx, message) => {}
+   *   args: z.object({ id: z.string() }),
+   *   handler: async (ctx, args) => {}
    * })
+   *
+   * @remarks
+   * Use exactly one of `handler` or `batchHandler` for worker-consumer queues.
    */
   <TSchema extends z.ZodTypeAny>(config: QueueConfig<E, TSchema>): QueueHandle<E, z.infer<TSchema>>;
+}
 
+/**
+ * Defines a multi-job queue contract and returns job-keyed producer handles.
+ */
+export interface DefineQueues<E> {
   /**
    * Declare a multi-job queue where each top-level key is a job definition.
    *
    * @example
-   * defineQueue({
-   *   email: { message: z.object({ to: z.string() }), process: async () => {} },
-   *   audit: { message: z.object({ id: z.string() }), process: async () => {} }
+   * defineQueues({
+   *   email: { args: z.object({ to: z.string() }), handler: async () => {} },
+   *   audit: { args: z.object({ id: z.string() }), handler: async () => {} }
    * })
+   *
+   * @remarks
+   * Shared queue settings (for example `retry`, `retryDelay`, `batch`) stay at the top level.
    */
   <const TConfig extends Record<string, unknown>>(
     config: MultiJobQueueConfig<E, TConfig>
@@ -329,11 +394,18 @@ export interface DefineQueue<E> {
 }
 
 /**
+ * Internal helper type that supports both single and multi-job queue declarations.
+ */
+export interface DefineAnyQueue<E> extends DefineQueue<E>, DefineQueues<E> {}
+
+/**
  * SDK helpers returned by `createSDK`.
  */
 export interface BetterCfSDK<E> {
-  /** Queue declaration helper with schema-inferred producer types. */
+  /** Single-queue helper. */
   defineQueue: DefineQueue<E>;
+  /** Multi-job helper where each top-level key is a job declaration. */
+  defineQueues: DefineQueues<E>;
   /** Worker declaration helper that maps to Cloudflare module handlers. */
   defineWorker: DefineWorker<E>;
 }
@@ -378,5 +450,12 @@ export const RESERVED_MULTI_JOB_KEYS = new Set([
   'deliveryDelay',
   'visibilityTimeout',
   'batch',
-  'consumer'
+  'consumer',
+  'args',
+  'handler',
+  'batchHandler',
+  'onFailure',
+  'message',
+  'process',
+  'processBatch'
 ]);

@@ -4,6 +4,7 @@ import { getQueueInternals } from '../queue/internal.js';
  * Options for queue consumer tests.
  */
 interface TestQueueBaseOptions<E> {
+  /** Worker env object passed into queue consume simulation. */
   env: E;
   /** Overrides message attempts metadata. */
   attempts?: number;
@@ -36,6 +37,10 @@ export interface TestQueueResult<TMessage> {
 
 /**
  * Runs a queue declaration's consumer logic in-memory for tests.
+ *
+ * @param handle Queue handle returned by `defineQueue(...)` or `defineQueues(...)`.
+ * @param options Test input payloads and env.
+ * @returns Acked/retried payload collections captured from the simulated consume flow.
  */
 export async function testQueue<E, TMessage>(
   handle: unknown,

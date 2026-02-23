@@ -1,3 +1,3 @@
 # batch-processing
 
-Queue configured for `processBatch` mode.
+Queue configured for `batchHandler` mode.

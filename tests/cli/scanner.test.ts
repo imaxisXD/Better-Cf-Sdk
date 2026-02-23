@@ -36,8 +36,8 @@ describe('queue scanner', () => {
 import { defineQueue } from '../../../better-cf.config';
 
 export const signupQueue = defineQueue({
-  message: z.object({ id: z.string() }),
-  process: async () => {}
+  args: z.object({ id: z.string() }),
+  handler: async () => {}
 });
 `,
       'utf8'
@@ -67,8 +67,8 @@ export const { defineQueue } = createSDK<Env>();
 import { defineQueue as dq } from '../../better-cf.config';
 
 const queueDef = dq({
-  message: z.object({ email: z.string() }),
-  process: async () => {}
+  args: z.object({ email: z.string() }),
+  handler: async () => {}
 });
 
 export default queueDef;
@@ -81,6 +81,42 @@ export default queueDef;
     expect(result.queues).toHaveLength(1);
     expect(result.queues[0].isDefaultExport).toBe(true);
     expect(result.queues[0].queueName).toBe('default-email');
+  });
+
+  it('discovers queues declared with defineQueues imports', async () => {
+    const temp = makeTempDir('better-cf-define-queues-');
+    fs.mkdirSync(path.join(temp, 'src/queues'), { recursive: true });
+
+    fs.writeFileSync(
+      path.join(temp, 'better-cf.config.ts'),
+      `import { createSDK } from 'better-cf/queue';
+export const { defineQueues } = createSDK();
+`,
+      'utf8'
+    );
+
+    fs.writeFileSync(
+      path.join(temp, 'src/queues/jobs.ts'),
+      `import { z } from 'zod';
+import { defineQueues as dqs } from '../../better-cf.config';
+
+export const jobsQueue = dqs({
+  signup: {
+    args: z.object({ email: z.string() }),
+    handler: async () => {}
+  },
+  retry: 3
+});
+`,
+      'utf8'
+    );
+
+    const result = await scanQueues(loadCliConfig(temp));
+
+    expect(result.queues).toHaveLength(1);
+    expect(result.queues[0].queueName).toBe('jobs');
+    expect(result.queues[0].bindingName).toBe('QUEUE_JOBS');
+    expect(result.diagnostics.some((diag) => diag.level === 'error')).toBe(false);
   });
 
   it('reports invalid pull-mode handler combinations', async () => {
@@ -101,9 +137,9 @@ export const { defineQueue } = createSDK();
 import { defineQueue } from '../../better-cf.config';
 
 export const pullQueue = defineQueue({
-  message: z.object({ id: z.string() }),
+  args: z.object({ id: z.string() }),
   consumer: { type: 'http_pull' },
-  process: async () => {}
+  handler: async () => {}
 });
 `,
       'utf8'

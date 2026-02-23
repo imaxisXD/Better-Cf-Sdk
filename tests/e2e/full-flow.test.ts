@@ -38,8 +38,8 @@ describe('better-cf e2e behavior', () => {
 
     const processed: Array<{ id: string }> = [];
     const queue = defineQueue({
-      message: z.object({ id: z.string() }),
-      process: async (_ctx, message) => {
+      args: z.object({ id: z.string() }),
+      handler: async (_ctx, message) => {
         processed.push(message);
       }
     });
@@ -58,8 +58,8 @@ describe('better-cf e2e behavior', () => {
     const { defineQueue } = createSDK<Record<string, never>>();
 
     const fallbackQueue = defineQueue({
-      message: z.object({ id: z.string() }),
-      processBatch: async () => {
+      args: z.object({ id: z.string() }),
+      batchHandler: async () => {
         return;
       }
     });
@@ -72,8 +72,8 @@ describe('better-cf e2e behavior', () => {
     expect(fallbackResult.acked).toHaveLength(2);
 
     const explicitQueue = defineQueue({
-      message: z.object({ id: z.string() }),
-      processBatch: async (ctx) => {
+      args: z.object({ id: z.string() }),
+      batchHandler: async (ctx) => {
         ctx.batch.retryAll();
       }
     });
@@ -88,12 +88,12 @@ describe('better-cf e2e behavior', () => {
   });
 
   it('routes multi-job envelopes and acks unknown jobs', async () => {
-    const { defineQueue } = createSDK<Record<string, never>>();
+    const { defineQueues } = createSDK<Record<string, never>>();
 
-    const queue = defineQueue({
+    const queue = defineQueues({
       signup: {
-        message: z.object({ email: z.string() }),
-        process: async () => {
+        args: z.object({ email: z.string() }),
+        handler: async () => {
           return;
         }
       },
@@ -172,8 +172,8 @@ describe('better-cf e2e behavior', () => {
 import { defineQueue } from '../../better-cf.config';
 
 export const signupQueue = defineQueue({
-  message: z.object({ id: z.string() }),
-  process: async () => {}
+  args: z.object({ id: z.string() }),
+  handler: async () => {}
 });
 `,
       'utf8'
@@ -182,7 +182,7 @@ export const signupQueue = defineQueue({
     await expect(runGenerate(temp)).rejects.toThrow('Queue discovery failed');
   });
 
-  it('fails generate for invalid process/processBatch combo', async () => {
+  it('fails generate for invalid handler/batchHandler combo', async () => {
     const fixture = path.join(repoRoot, 'fixtures/e2e/basic-worker');
     const temp = makeTempDir('better-cf-e2e-invalid-');
     copyDir(fixture, temp);
@@ -193,9 +193,9 @@ export const signupQueue = defineQueue({
 import { defineQueue } from '../../better-cf.config';
 
 export const signupQueue = defineQueue({
-  message: z.object({ email: z.string() }),
-  process: async () => {},
-  processBatch: async () => {}
+  args: z.object({ email: z.string() }),
+  handler: async () => {},
+  batchHandler: async () => {}
 });
 `,
       'utf8'

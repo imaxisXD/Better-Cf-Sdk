@@ -16,8 +16,8 @@ import { z } from 'zod';
 import { defineQueue } from '../../better-cf.config';
 
 export const signupQueue = defineQueue({
-  message: z.object({ email: z.string().email() }),
-  process: async (ctx, message) => {
+  args: z.object({ email: z.string().email() }),
+  handler: async (ctx, message) => {
     console.log(ctx.message.id, message.email);
   }
 });
@@ -29,11 +29,11 @@ Source: `packages/better-cf/examples/retry-dead-letter`
 
 ```ts
 export const emailQueue = defineQueue({
-  message: z.object({ to: z.string() }),
+  args: z.object({ to: z.string() }),
   retry: 3,
   retryDelay: '20s',
   deadLetter: 'failed-email',
-  process: async (ctx, message) => {
+  handler: async (ctx, message) => {
     console.log(ctx.message.attempts, message.to);
     throw new Error('simulate failure');
   }
@@ -46,13 +46,13 @@ Source: `packages/better-cf/examples/batch-processing`
 
 ```ts
 export const auditQueue = defineQueue({
-  message: z.object({ action: z.string() }),
+  args: z.object({ action: z.string() }),
   batch: {
     maxSize: 10,
     timeout: '30s',
     maxConcurrency: 2
   },
-  processBatch: async (ctx, messages) => {
+  batchHandler: async (ctx, messages) => {
     console.log(messages.length, ctx.batch.queue);
     ctx.batch.ackAll();
   }
@@ -65,15 +65,15 @@ Source: `packages/better-cf/examples/multi-queue`
 
 ```ts
 export const emailQueue = defineQueue({
-  message: z.object({ to: z.string() }),
-  process: async (ctx, message) => {
+  args: z.object({ to: z.string() }),
+  handler: async (ctx, message) => {
     console.log(ctx.message.id, message.to);
   }
 });
 
 export const auditQueue = defineQueue({
-  message: z.object({ action: z.string() }),
-  process: async (ctx, message) => {
+  args: z.object({ action: z.string() }),
+  handler: async (ctx, message) => {
     console.log(ctx.message.id, message.action);
   }
 });
@@ -84,16 +84,16 @@ export const auditQueue = defineQueue({
 Source: `packages/better-cf/examples/multi-job-queue`
 
 ```ts
-export const jobsQueue = defineQueue({
+export const jobsQueue = defineQueues({
   signup: {
-    message: z.object({ email: z.string().email() }),
-    process: async (ctx, message) => {
+    args: z.object({ email: z.string().email() }),
+    handler: async (ctx, message) => {
       console.log(ctx.message.id, message.email);
     }
   },
   invoice: {
-    message: z.object({ amount: z.number() }),
-    process: async (ctx, message) => {
+    args: z.object({ amount: z.number() }),
+    handler: async (ctx, message) => {
       console.log(ctx.message.id, message.amount);
     }
   }
@@ -106,7 +106,7 @@ Source: `packages/better-cf/examples/pull-consumer-http`
 
 ```ts
 export const pullQueue = defineQueue({
-  message: z.object({ id: z.string() }),
+  args: z.object({ id: z.string() }),
   consumer: { type: 'http_pull', visibilityTimeout: '30s' },
   retry: 5,
   deadLetter: 'pull-dlq'

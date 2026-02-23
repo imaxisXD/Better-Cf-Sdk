@@ -1,13 +1,13 @@
 import { z } from 'zod';
-import { defineQueue } from '../../better-cf.config';
+import { defineQueues } from '../../better-cf.config';
 
-export const jobsQueue = defineQueue({
+export const jobsQueue = defineQueues({
   signup: {
-    message: z.object({ email: z.string().email() }),
-    process: async () => {}
+    args: z.object({ email: z.string().email() }),
+    handler: async () => {}
   },
   invoice: {
-    message: z.object({ amount: z.number() }),
-    process: async () => {}
+    args: z.object({ amount: z.number() }),
+    handler: async () => {}
   }
 });

@@ -29,7 +29,7 @@ Expected output:
 
 Discovery emits diagnostics such as:
 
-- `INVALID_PROCESS_MODE`
+- `INVALID_HANDLER_MODE`
 - `INVALID_PULL_MODE_HANDLER`
 - `UNSUPPORTED_PULL_MULTIJOB`
 - `QUEUE_NAME_CONFLICT`

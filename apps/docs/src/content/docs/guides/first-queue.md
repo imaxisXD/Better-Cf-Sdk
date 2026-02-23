@@ -38,13 +38,13 @@ import { z } from 'zod';
 import { defineQueue } from '../../better-cf.config';
 
 export const signupQueue = defineQueue({
-  message: z.object({
+  args: z.object({
     email: z.string().email(),
     userId: z.string()
   }),
   retry: 3,
   retryDelay: '30s',
-  process: async (ctx, message) => {
+  handler: async (ctx, message) => {
     console.log('signup', ctx.message.id, message.email, message.userId);
   }
 });

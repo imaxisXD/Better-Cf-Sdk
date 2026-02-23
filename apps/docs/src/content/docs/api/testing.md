@@ -78,7 +78,7 @@ Check handler logic for explicit retry paths and verify `attempts` value used in
 
 ### Type mismatch in test payload
 
-Align payload shape with queue `message` schema used in `defineQueue(...)`.
+Align payload shape with queue `args` schema used in `defineQueue(...)`.
 
 ## Next Steps
 

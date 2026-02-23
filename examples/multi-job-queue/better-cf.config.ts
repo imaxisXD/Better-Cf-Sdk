@@ -4,4 +4,4 @@ type Env = {
   QUEUE_JOBS: Queue;
 };
 
-export const { defineQueue, defineWorker } = createSDK<Env>();
+export const { defineQueue, defineQueues, defineWorker } = createSDK<Env>();

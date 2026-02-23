@@ -3,6 +3,7 @@ import type {
   AnyJobConfig,
   AnyPushQueueConfig,
   BatchContext,
+  ConsumerBatchEntry,
   Duration,
   QueueContext,
   QueueDefinition,
@@ -37,7 +38,7 @@ async function consumeSingle<E>(
   env: QueueEnv<E>,
   executionCtx: ExecutionContext
 ): Promise<void> {
-  if ('processBatch' in config && config.processBatch) {
+  if ('batchHandler' in config && config.batchHandler) {
     let ackOrRetryHandled = false;
     const batchCtx: BatchContext<E> = {
       env,
@@ -57,15 +58,22 @@ async function consumeSingle<E>(
       }
     };
 
-    const typedMessages = batch.messages.map((msg) => ({
-      data: msg.body,
-      id: msg.id,
-      timestamp: msg.timestamp,
-      attempts: msg.attempts
-    }));
-
     try {
-      await config.processBatch(batchCtx, typedMessages as never);
+      const typedMessages: ConsumerBatchEntry<unknown>[] = batch.messages.map((msg) => {
+        const parsed = config.args.safeParse(msg.body);
+        if (!parsed.success) {
+          throw new Error(`Queue batch validation failed for ${msg.id}: ${parsed.error.message}`);
+        }
+
+        return {
+          data: parsed.data,
+          id: msg.id,
+          timestamp: msg.timestamp,
+          attempts: msg.attempts
+        };
+      });
+
+      await config.batchHandler(batchCtx, typedMessages as never);
       if (!ackOrRetryHandled) {
         batch.ackAll();
       }
@@ -95,12 +103,12 @@ async function consumeSingle<E>(
     };
 
     try {
-      const parsed = config.message.safeParse(message.body);
+      const parsed = config.args.safeParse(message.body);
       if (!parsed.success) {
-        throw new Error(`Queue message validation failed: ${parsed.error.message}`);
+        throw new Error(`Queue args validation failed: ${parsed.error.message}`);
       }
 
-      await config.process(queueCtx, parsed.data as never);
+      await config.handler(queueCtx, parsed.data as never);
       message.ack();
     } catch (error) {
       await callFailureHandler(
@@ -148,11 +156,11 @@ async function consumeMulti<E>(
     };
 
     try {
-      const parsed = job.message.safeParse(envelope.data);
+      const parsed = job.args.safeParse(envelope.data);
       if (!parsed.success) {
         throw new Error(`Queue job validation failed for ${jobName}: ${parsed.error.message}`);
       }
-      await job.process(queueCtx, parsed.data);
+      await job.handler(queueCtx, parsed.data);
       message.ack();
     } catch (error) {
       await callFailureHandler(
@@ -170,12 +178,12 @@ async function consumeMulti<E>(
   }
 }
 
-type HandlerLike<TContext> = ((ctx: TContext, message: unknown, error: Error) => Promise<void>) | undefined;
+type HandlerLike<TContext> = ((ctx: TContext, args: unknown, error: Error) => Promise<void>) | undefined;
 
 async function callFailureHandler<TContext>(
   handler: HandlerLike<TContext>,
   context: TContext,
-  message: unknown,
+  args: unknown,
   rawError: unknown
 ): Promise<void> {
   if (!handler) {
@@ -184,7 +192,7 @@ async function callFailureHandler<TContext>(
 
   const error = rawError instanceof Error ? rawError : new Error(String(rawError));
   try {
-    await handler(context, message, error);
+    await handler(context, args, error);
   } catch {
     // Do not fail consume flow because failure hook failed.
   }

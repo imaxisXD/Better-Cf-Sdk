@@ -8,8 +8,8 @@ describe('defineQueue producer API', () => {
     const { defineQueue } = createSDK<{ QUEUE_SIGNUP: { send: ReturnType<typeof vi.fn> } }>();
 
     const queue = defineQueue({
-      message: z.object({ email: z.string().email() }),
-      async process() {
+      args: z.object({ email: z.string().email() }),
+      async handler() {
         return;
       }
     });
@@ -35,8 +35,8 @@ describe('defineQueue producer API', () => {
     const { defineQueue } = createSDK<{ QUEUE_SIGNUP: { sendBatch: ReturnType<typeof vi.fn> } }>();
 
     const queue = defineQueue({
-      message: z.object({ email: z.string().email() }),
-      async process() {
+      args: z.object({ email: z.string().email() }),
+      async handler() {
         return;
       }
     });
@@ -68,8 +68,8 @@ describe('defineQueue producer API', () => {
     const { defineQueue } = createSDK<{ QUEUE_SIGNUP: { sendBatch: ReturnType<typeof vi.fn> } }>();
 
     const queue = defineQueue({
-      message: z.object({ email: z.string().email() }),
-      async process() {
+      args: z.object({ email: z.string().email() }),
+      async handler() {
         return;
       }
     });
@@ -102,8 +102,8 @@ describe('defineQueue producer API', () => {
     const { defineQueue } = createSDK<Record<string, unknown>>();
 
     const queue = defineQueue({
-      message: z.object({ id: z.string() }),
-      async process() {
+      args: z.object({ id: z.string() }),
+      async handler() {
         return;
       }
     });
@@ -111,19 +111,49 @@ describe('defineQueue producer API', () => {
     await expect(queue.send({ env: {} }, { id: '1' })).rejects.toThrow('Queue binding not initialized');
   });
 
-  it('sends job envelopes for multi-job queues', async () => {
-    const { defineQueue } = createSDK<{ QUEUE_JOBS: { send: ReturnType<typeof vi.fn> } }>();
+  it('throws clear migration error for legacy single-queue keys', () => {
+    const { defineQueue } = createSDK<Record<string, unknown>>();
+    const unsafeDefineQueue = defineQueue as (config: Record<string, unknown>) => unknown;
 
-    const jobs = defineQueue({
+    expect(() =>
+      unsafeDefineQueue({
+        message: z.object({ id: z.string() }),
+        process: async () => {
+          return;
+        }
+      })
+    ).toThrow('Rename message->args, process->handler, processBatch->batchHandler.');
+  });
+
+  it('throws clear migration error for legacy multi-job keys', () => {
+    const { defineQueues } = createSDK<Record<string, unknown>>();
+    const unsafeDefineQueues = defineQueues as (config: Record<string, unknown>) => unknown;
+
+    expect(() =>
+      unsafeDefineQueues({
+        signup: {
+          message: z.object({ id: z.string() }),
+          process: async () => {
+            return;
+          }
+        }
+      })
+    ).toThrow('Multi-job queue "signup" uses legacy keys.');
+  });
+
+  it('sends job envelopes for multi-job queues', async () => {
+    const { defineQueues } = createSDK<{ QUEUE_JOBS: { send: ReturnType<typeof vi.fn> } }>();
+
+    const jobs = defineQueues({
       signup: {
-        message: z.object({ email: z.string() }),
-        async process() {
+        args: z.object({ email: z.string() }),
+        async handler() {
           return;
         }
       },
       invoice: {
-        message: z.object({ amount: z.number() }),
-        async process() {
+        args: z.object({ amount: z.number() }),
+        async handler() {
           return;
         }
       },

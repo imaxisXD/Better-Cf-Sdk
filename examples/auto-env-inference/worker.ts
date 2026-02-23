@@ -3,8 +3,8 @@ import { z } from 'zod';
 import { defineQueue } from './better-cf.config';
 
 export const emailQueue = defineQueue({
-  message: z.object({ to: z.string().email() }),
-  process: async (ctx, msg) => {
+  args: z.object({ to: z.string().email() }),
+  handler: async (ctx, msg) => {
     console.log(ctx.env, msg.to);
   }
 });

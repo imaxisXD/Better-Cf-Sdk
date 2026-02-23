@@ -89,7 +89,7 @@ function defaultConfigTemplate(): string {
 
 // Auto-inferred env types are generated under .better-cf/*.d.ts
 // You can still switch to createSDK<Env>() when you need explicit overrides.
-export const { defineQueue, defineWorker } = createSDK();
+export const { defineQueue, defineQueues, defineWorker } = createSDK();
 
 export const betterCfConfig = {
   // workerEntry: 'worker.ts',

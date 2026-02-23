@@ -76,8 +76,8 @@ describe('wrangler config patching', () => {
 import { defineQueue } from '../../better-cf.config';
 
 export const signupQueue = defineQueue({
-  message: z.object({ email: z.string().email(), userId: z.string() }),
-  process: async () => {},
+  args: z.object({ email: z.string().email(), userId: z.string() }),
+  handler: async () => {},
   retryDelay: 'soon'
 });
 `,
@@ -98,8 +98,8 @@ export const signupQueue = defineQueue({
 import { defineQueue } from '../../better-cf.config';
 
 export const signupQueue = defineQueue({
-  message: z.object({ email: z.string().email(), userId: z.string() }),
-  process: async () => {},
+  args: z.object({ email: z.string().email(), userId: z.string() }),
+  handler: async () => {},
   deadLetter: 'dlq-"quoted"-\\\\path'
 });
 `,

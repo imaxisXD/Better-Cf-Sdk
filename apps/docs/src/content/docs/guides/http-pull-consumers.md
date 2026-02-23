@@ -20,7 +20,7 @@ Use pull mode when you need HTTP-driven queue consumption instead of worker push
 
 ```ts
 export const pullQueue = defineQueue({
-  message: z.object({ id: z.string() }),
+  args: z.object({ id: z.string() }),
   consumer: { type: 'http_pull', visibilityTimeout: '30s' },
   retry: 5,
   deadLetter: 'pull-dlq'
@@ -34,7 +34,7 @@ Expected output:
 
 ## Step 2: Keep Pull Mode Constraints Valid
 
-- do not define `process` or `processBatch` when `consumer.type = 'http_pull'`
+- do not define `handler` or `batchHandler` when `consumer.type = 'http_pull'`
 - do not use multi-job queue mode with pull consumers
 
 Expected output:
@@ -60,7 +60,7 @@ Expected output:
 
 ## Troubleshooting
 
-### `Queue with consumer.type="http_pull" cannot include process/processBatch`
+### `Queue with consumer.type="http_pull" cannot include handler/batchHandler`
 
 Remove push handlers from pull queue declarations.
 

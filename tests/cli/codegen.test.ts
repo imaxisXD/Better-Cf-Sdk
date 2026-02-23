@@ -56,8 +56,8 @@ describe('code generation', () => {
 import { defineQueue } from '../../better-cf.config';
 
 export const ohareQueue = defineQueue({
-  message: z.object({ id: z.string() }),
-  process: async () => {}
+  args: z.object({ id: z.string() }),
+  handler: async () => {}
 });
 `,
       'utf8'

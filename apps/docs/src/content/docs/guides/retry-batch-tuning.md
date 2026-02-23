@@ -20,11 +20,11 @@ Tune delivery settings so retry behavior and throughput match your workload and 
 
 ```ts
 export const emailQueue = defineQueue({
-  message: z.object({ to: z.string().email() }),
+  args: z.object({ to: z.string().email() }),
   retry: 5,
   retryDelay: '20s',
   deadLetter: 'email-failed',
-  process: async (ctx, message) => {
+  handler: async (ctx, message) => {
     console.log(ctx.message.attempts, message.to);
   }
 });

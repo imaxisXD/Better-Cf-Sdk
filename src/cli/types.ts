@@ -8,8 +8,8 @@ export interface ExtractedQueueConfig {
   maxConcurrency?: number;
   visibilityTimeout?: string | number;
   consumerType?: 'worker' | 'http_pull';
-  hasProcess: boolean;
-  hasProcessBatch: boolean;
+  hasHandler: boolean;
+  hasBatchHandler: boolean;
   isMultiJob: boolean;
 }
 
@@ -31,7 +31,7 @@ export interface DiscoveryDiagnostic {
   code:
     | 'QUEUE_NAME_CONFLICT'
     | 'BINDING_NAME_CONFLICT'
-    | 'INVALID_PROCESS_MODE'
+    | 'INVALID_HANDLER_MODE'
     | 'INVALID_PULL_MODE_HANDLER'
     | 'UNSUPPORTED_PULL_MULTIJOB'
     | 'SCANNER_FILE_ERROR'

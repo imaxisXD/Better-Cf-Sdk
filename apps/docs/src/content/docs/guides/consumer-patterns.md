@@ -1,14 +1,14 @@
 ---
 title: Choose Consumer Patterns
-description: Implement push consumers with process/processBatch and failure handling patterns.
+description: Implement push consumers with handler/batchHandler and failure handling patterns.
 ---
 
 Choose the right queue consumer shape for throughput, ordering, and retry behavior.
 
 ## What You Will Achieve
 
-- implement single-message consumption with `process`
-- implement batch consumption with `processBatch`
+- implement single-message consumption with `handler`
+- implement batch consumption with `batchHandler`
 - attach `onFailure` for explicit failure side-effects
 
 ## Before You Start
@@ -16,16 +16,16 @@ Choose the right queue consumer shape for throughput, ordering, and retry behavi
 - complete [Build Your First Queue](/guides/first-queue)
 - decide whether workload is item-by-item or batch-oriented
 
-## Step 1: Use `process` for Per-Message Control
+## Step 1: Use `handler` for Per-Message Control
 
 ```ts
 export const signupQueue = defineQueue({
-  message: z.object({ email: z.string().email() }),
-  process: async (ctx, message) => {
-    console.log(ctx.message.id, ctx.message.attempts, message.email);
+  args: z.object({ email: z.string().email() }),
+  handler: async (ctx, args) => {
+    console.log(ctx.message.id, ctx.message.attempts, args.email);
   },
-  onFailure: async (ctx, message, error) => {
-    console.error('signup failed', error.message, message);
+  onFailure: async (ctx, args, error) => {
+    console.error('signup failed', error.message, args);
   }
 });
 ```
@@ -35,13 +35,13 @@ Expected output:
 - handler runs once per message
 - `ctx.message` includes `id`, `attempts`, `queue`, and timestamp metadata
 
-## Step 2: Use `processBatch` for Throughput
+## Step 2: Use `batchHandler` for Throughput
 
 ```ts
 export const auditQueue = defineQueue({
-  message: z.object({ action: z.string() }),
+  args: z.object({ action: z.string() }),
   batch: { maxSize: 10, timeout: '30s', maxConcurrency: 2 },
-  processBatch: async (ctx, messages) => {
+  batchHandler: async (ctx, messages) => {
     console.log(messages.length, ctx.batch.queue);
     ctx.batch.ackAll();
   }
@@ -55,7 +55,7 @@ Expected output:
 
 ## Step 3: Keep Consumer Mode Valid
 
-- choose exactly one of `process` or `processBatch`
+- choose exactly one of `handler` or `batchHandler`
 - use `consumer.type = 'http_pull'` only for pull workflows (no push handlers)
 
 Expected output:
@@ -63,16 +63,16 @@ Expected output:
 - discovery/generation pipeline runs without queue config errors
 
 <div class="dx-callout">
-  <strong>Good to know:</strong> defining both <code>process</code> and <code>processBatch</code> fails fast in queue definition validation.
+  <strong>Good to know:</strong> defining both <code>handler</code> and <code>batchHandler</code> fails fast in queue definition validation.
 </div>
 
 ## Troubleshooting
 
-### `Queue config cannot define both process and processBatch`
+### `Queue config cannot define both handler and batchHandler`
 
 Remove one handler mode and keep only the intended consumer shape.
 
-### `Queue config must define one of process or processBatch`
+### `Queue config must define one of handler or batchHandler`
 
 In push mode, add one handler. In pull mode, set `consumer.type = 'http_pull'` and remove handlers.
 
