@@ -4,6 +4,18 @@
 
 ### Major Changes
 
+- d47fa80: Refactor CLI to a Fuma-style stack and remove queue/subscription admin wrappers.
+
+  - remove `queue:*` and `subscription:*` commands from `better-cf`
+  - add nested utility commands: `registry list|info|add|cache clear`, `tree`
+  - switch `create` package manager flags to `--package-manager <npm|pnpm|yarn|bun>`
+  - migrate CLI AST parsing to `oxc-parser`
+  - migrate CLI subprocess handling to `tinyexec`
+
+## 1.0.0
+
+### Major Changes
+
 - 7d00665: New api name , renmae of params
 - 7d00665: feat: split queue helpers into single `defineQueue` and multi-job `defineQueues`, and rename queue config keys to `args`/`handler`/`batchHandler`.
 
