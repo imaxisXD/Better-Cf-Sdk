@@ -5,6 +5,8 @@ export default defineConfig({
     'src/index.ts',
     'src/queue/index.ts',
     'src/queue/internal.ts',
+    'src/durable-object/index.ts',
+    'src/durable-object/internal.ts',
     'src/testing/index.ts',
     'src/cli/index.ts'
   ],

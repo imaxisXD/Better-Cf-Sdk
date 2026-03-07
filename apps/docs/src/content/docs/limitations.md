@@ -1,13 +1,13 @@
 ---
-title: Limitations
-description: Queue SDK boundaries, known gaps, and when native Cloudflare is the better fit.
+title: Queue SDK Limitations (Legacy Surface)
+description: Boundaries of the original queue-only API and when native Cloudflare or the primary durable-object surface is the better fit.
 ---
 
-Use this page to decide where Queue SDK is the right default and where native Cloudflare tooling is currently more appropriate.
+Use this page to decide where the legacy Queue SDK is still appropriate and where the primary Durable Object SDK or native Cloudflare is the better fit.
 
 ## What You Will Achieve
 
-- understand what Queue SDK does not abstract today
+- understand what the legacy Queue SDK does not abstract today
 - identify known constraints that affect implementation choices
 - choose practical fallback paths for unsupported scenarios
 
@@ -19,7 +19,7 @@ Use this page to decide where Queue SDK is the right default and where native Cl
 
 ## Step 1: Check Not-Supported Areas
 
-Queue SDK currently does not provide:
+The legacy Queue SDK currently does not provide:
 
 - pull-message runtime abstraction (pull mode is config/admin-focused)
 - queue metrics/dashboard abstraction layer
@@ -56,7 +56,7 @@ Expected output:
 - each unsupported requirement has a concrete fallback path
 
 <div class="dx-callout">
-  <strong>Good to know:</strong> the recommended default remains Queue SDK for day-to-day app development, with selective native Cloudflare usage where the SDK intentionally does not abstract.
+  <strong>Good to know:</strong> the recommended default for new projects is now <code>better-cf/durable-object</code>. Use the queue-only surface when you want to stay on the original inline-consumer model.
 </div>
 
 ## Troubleshooting

@@ -1,9 +1,9 @@
 ---
 title: Queue SDK Cookbook
-description: Source-backed Queue SDK (Alpha) implementation examples for common queue patterns.
+description: Source-backed examples for the legacy Queue SDK surface.
 ---
 
-Each example in this page targets Queue SDK (Alpha), the currently available package in the Better Cloudflare SDK suite.
+Each example in this page targets the legacy Queue SDK surface. For new projects, start with the Durable Object docs first and use this page only when you are intentionally staying on `better-cf/queue`.
 
 Each pattern below maps to a real example in `/packages/better-cf/examples`.
 

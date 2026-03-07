@@ -1,18 +1,19 @@
 ---
 title: Cloudflare vs better-cf
-description: Compare native Cloudflare queue workflows with Queue SDK workflow, API shape, and day-to-day DX.
+description: Compare native Cloudflare Durable Object and queue workflows with the current better-cf surfaces and day-to-day DX.
 ---
 
 import { Code } from '@astrojs/starlight/components';
 
-Compare these two implementation paths for queue-driven Worker development:
+Compare these implementation paths for stateful Worker development:
 
-- native Cloudflare path (Wrangler + manual queue wiring)
-- Queue SDK path (`better-cf/queue` + automation CLI)
+- native Cloudflare path (Wrangler + manual queue / Durable Object wiring)
+- primary better-cf path (`better-cf/durable-object`)
+- legacy queue-only path (`better-cf/queue`)
 
 ## What You Will Achieve
 
-- understand where Queue SDK improves everyday workflow speed
+- understand where the primary `better-cf/durable-object` surface improves everyday workflow speed
 - identify where native Cloudflare remains the better fit
 - choose a practical default per team/project stage
 
@@ -20,7 +21,7 @@ Compare these two implementation paths for queue-driven Worker development:
 
 - know your team’s queue workload profile (feature velocity vs low-level control)
 - review current boundaries in [Limitations](/limitations)
-- know that Queue SDK is currently the shipped Alpha package in the suite
+- know that `better-cf/durable-object` is the current primary Alpha package in the suite
 
 ## Step 1: Compare Workflow and DX
 
@@ -38,19 +39,19 @@ Compare these two implementation paths for queue-driven Worker development:
       <tr>
         <td data-label="Concern"><strong>Queue contract definition</strong></td>
         <td data-label="Cloudflare flow">Payload shape is defined by convention or custom validation in handlers.</td>
-        <td data-label="better-cf flow"><code>defineQueue(&#123; args: z.object(...) &#125;)</code> centralizes contract and typed producer/consumer usage.</td>
+        <td data-label="better-cf flow"><code>schema.ts</code> declarations centralize queue and Durable Object contracts.</td>
         <td data-label="Why it matters">One source of truth for message shape.</td>
       </tr>
       <tr>
         <td data-label="Concern"><strong>Entry and binding wiring</strong></td>
-        <td data-label="Cloudflare flow">Entry exports and Wrangler queue sections are maintained manually.</td>
-        <td data-label="better-cf flow"><code>better-cf dev/generate</code> scans queues, generates entry, and patches supported Wrangler configs.</td>
+        <td data-label="Cloudflare flow">Entry exports, queue sections, and Durable Object bindings are maintained manually.</td>
+        <td data-label="better-cf flow"><code>better-cf dev/generate</code> scans resources, generates entry, and patches supported Wrangler configs.</td>
         <td data-label="Why it matters">Less config drift and less repetitive maintenance.</td>
       </tr>
       <tr>
         <td data-label="Concern"><strong>Local dev loop</strong></td>
         <td data-label="Cloudflare flow">Custom watch/rebuild orchestration per team.</td>
-        <td data-label="better-cf flow">Single scan → validate → generate → patch → run loop.</td>
+        <td data-label="better-cf flow">Single scan → validate → generate → patch → run loop across queues and Durable Objects.</td>
         <td data-label="Why it matters">Lower setup overhead for daily development.</td>
       </tr>
       <tr>
@@ -61,8 +62,8 @@ Compare these two implementation paths for queue-driven Worker development:
       </tr>
       <tr>
         <td data-label="Concern"><strong>Queue testing</strong></td>
-        <td data-label="Cloudflare flow">Custom harness and batch stubs.</td>
-        <td data-label="better-cf flow"><code>testQueue</code> runs queue handlers directly in unit tests.</td>
+        <td data-label="Cloudflare flow">Custom harnesses for queue consumers and Durable Object methods.</td>
+        <td data-label="better-cf flow"><code>testQueue</code>, <code>testQueueConsumer</code>, and <code>testDurableFunction</code> run SDK behavior directly in unit tests.</td>
         <td data-label="Why it matters">Shorter feedback loop for queue logic.</td>
       </tr>
     </tbody>
@@ -88,39 +89,39 @@ Expected output:
     <tbody>
       <tr>
         <td data-label="Capability"><strong>SDK bootstrap</strong></td>
-        <td data-label="Cloudflare primitive">Direct Worker runtime + queue bindings.</td>
+        <td data-label="Cloudflare primitive">Direct Worker runtime + queue / Durable Object bindings.</td>
         <td data-label="better-cf API"><code>createSDK&lt;Env&gt;()</code></td>
-        <td data-label="Notes">Returns typed `defineQueue` and `defineWorker` helpers.</td>
+        <td data-label="Notes">Returns typed `defineDurableObject`, `defineQueue`, `defineQueues`, and `defineWorker` helpers.</td>
       </tr>
       <tr>
-        <td data-label="Capability"><strong>Queue definition</strong></td>
-        <td data-label="Cloudflare primitive">Custom queue handler structure.</td>
-        <td data-label="better-cf API"><code>defineQueue(...)</code></td>
-        <td data-label="Notes">Supports push mode, pull config mode, and multi-job mode.</td>
+        <td data-label="Capability"><strong>Durable Object declaration</strong></td>
+        <td data-label="Cloudflare primitive">Class + namespace + storage wiring.</td>
+        <td data-label="better-cf API"><code>defineDurableObject(...)</code></td>
+        <td data-label="Notes">Owns stable namespace identity, key schema, and version metadata.</td>
       </tr>
       <tr>
-        <td data-label="Capability"><strong>Producer send</strong></td>
-        <td data-label="Cloudflare primitive"><code>env.MY_QUEUE.send/sendBatch</code></td>
-        <td data-label="better-cf API"><code>queue.send</code> / <code>queue.sendBatch</code></td>
-        <td data-label="Notes">Typed payload + delivery/content options.</td>
+        <td data-label="Capability"><strong>External behavior registration</strong></td>
+        <td data-label="Cloudflare primitive">Manual queue handlers and class methods.</td>
+        <td data-label="better-cf API"><code>room.fn(...)</code>, <code>queue.message(...)</code>, <code>queue.batch(...)</code></td>
+        <td data-label="Notes">Separates `schema.ts` declarations from runtime behavior.</td>
       </tr>
       <tr>
-        <td data-label="Capability"><strong>Worker wrapper</strong></td>
-        <td data-label="Cloudflare primitive">Manual `fetch/scheduled` wiring.</td>
-        <td data-label="better-cf API"><code>defineWorker(&#123; fetch, scheduled? &#125;)</code></td>
-        <td data-label="Notes">Typed context env including generated bindings.</td>
+        <td data-label="Capability"><strong>Generated runtime client</strong></td>
+        <td data-label="Cloudflare primitive">Manual stub lookups and queue binding calls.</td>
+        <td data-label="better-cf API"><code>ctx.api.room.sendMessage(key, args)</code>, <code>ctx.api.emailQueue.send(args)</code></td>
+        <td data-label="Notes">Generated typings and JSDoc come from declarations.</td>
       </tr>
       <tr>
         <td data-label="Capability"><strong>Testing</strong></td>
         <td data-label="Cloudflare primitive">Custom mocks and harnesses.</td>
-        <td data-label="better-cf API"><code>testQueue(handle, options)</code></td>
-        <td data-label="Notes">Returns `acked`/`retried` assertion arrays.</td>
+        <td data-label="better-cf API"><code>testQueue(...)</code>, <code>testQueueConsumer(...)</code>, <code>testDurableFunction(...)</code></td>
+        <td data-label="Notes">Covers both the legacy queue surface and the current primary surface.</td>
       </tr>
       <tr>
         <td data-label="Capability"><strong>Admin ops</strong></td>
         <td data-label="Cloudflare primitive">Wrangler queue/subscription commands.</td>
-        <td data-label="better-cf API"><code>better-cf queue:&#42;</code> / <code>subscription:&#42;</code></td>
-        <td data-label="Notes">Validated wrapper commands over Wrangler.</td>
+        <td data-label="better-cf API"><code>Use Wrangler directly</code></td>
+        <td data-label="Notes">better-cf focuses on SDK DX workflow commands.</td>
       </tr>
     </tbody>
   </table>
@@ -167,27 +168,59 @@ export default {
 };`}
 />
 
-### Queue SDK pattern
+### Primary durable-object pattern
 
 <Code
   lang="ts"
-  code={`import { createSDK } from 'better-cf/queue';
+  code={`import { createSDK } from 'better-cf/durable-object';
 import { z } from 'zod';
 
-type Env = { QUEUE_SIGNUP: Queue };
-const { defineQueue, defineWorker } = createSDK<Env>();
+const sdk = createSDK();
+export const defineWorker = sdk.defineWorker;
 
-export const signupQueue = defineQueue({
-  args: z.object({ email: z.string().email(), userId: z.string() }),
-  retry: 3,
-  retryDelay: '30s',
-  handler: async ({ env }, message) => {
-    await handleSignup(env, message);
+export const room = sdk.defineDurableObject({
+  name: 'Room',
+  key: z.string()
+});
+
+export const emailQueue = sdk.defineQueue({
+  args: z.object({
+    roomId: z.string(),
+    to: z.string().email(),
+    body: z.string()
+  })
+});
+
+export const sendMessage = room.fn({
+  args: z.object({
+    body: z.string(),
+    author: z.string()
+  }),
+  handler: async ({ storage }, message) => {
+    const messages = ((await storage.get('messages')) as unknown[] | undefined) ?? [];
+    messages.push(message);
+    await storage.put('messages', messages);
+    return { ok: true };
+  }
+});
+
+export const emailQueueConsumer = emailQueue.message({
+  handler: async (ctx, job) => {
+    await ctx.api.room.sendMessage(job.roomId, {
+      body: job.body,
+      author: 'system'
+    });
   }
 });
 
 export default defineWorker({
-  async fetch() {
+  async fetch(_request, ctx) {
+    await ctx.api.emailQueue.send({
+      roomId: 'general',
+      to: 'team@example.com',
+      body: 'hello'
+    });
+
     return new Response('ok');
   }
 });`}
@@ -195,17 +228,17 @@ export default defineWorker({
 
 Expected output:
 
-- reduced worker boilerplate and centralized queue behavior definition
+- reduced worker boilerplate and centralized queue + Durable Object behavior definition
 
 <div class="dx-callout">
-  <strong>Good to know:</strong> practical default for most app teams is Queue SDK for daily development, with native Cloudflare commands kept for unsupported edge cases.
+  <strong>Good to know:</strong> the practical default for new app teams is now <code>better-cf/durable-object</code>. The original <code>better-cf/queue</code> surface remains available for existing inline-consumer projects.
 </div>
 
 ## Troubleshooting
 
 ### Comparison looks too abstract for your team
 
-Map each row to one current pain point (drift, setup complexity, testing cost) and run one pilot queue with Queue SDK.
+Map each row to one current pain point (drift, setup complexity, testing cost) and run one pilot Durable Object + queue workflow with the primary surface.
 
 ### Team needs unsupported runtime behavior
 
@@ -213,7 +246,7 @@ Use native Cloudflare APIs directly for that path while keeping SDK for supporte
 
 ### Decision blocked by Alpha status
 
-Adopt Queue SDK on bounded workflows first and keep fallback escape hatches explicit in architecture docs.
+Adopt the Durable Object SDK on bounded workflows first and keep fallback escape hatches explicit in architecture docs.
 
 ## Next Steps
 

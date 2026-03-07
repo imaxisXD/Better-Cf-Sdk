@@ -1,6 +1,6 @@
 ---
 title: Configure HTTP Pull Consumers
-description: Set up consumer.type="http_pull" queues and operate pull consumers with admin commands.
+description: Set up consumer.type="http_pull" queues and operate pull consumers with Wrangler admin commands on either better-cf surface.
 ---
 
 Use pull mode when you need HTTP-driven queue consumption instead of worker push handlers.
@@ -46,8 +46,8 @@ Expected output:
 Example commands:
 
 ```bash
-better-cf queue:consumer:http:add --queue pull-queue --visibility-timeout-secs 30 --message-retries 5
-better-cf queue:consumer:http:remove --queue pull-queue
+wrangler queues consumer http add --queue pull-queue --visibility-timeout-secs 30 --message-retries 5
+wrangler queues consumer http remove --queue pull-queue
 ```
 
 Expected output:
@@ -55,7 +55,7 @@ Expected output:
 - consumer settings are applied through Wrangler-wrapped admin operations
 
 <div class="dx-callout">
-  <strong>Good to know:</strong> this SDK currently does not provide a pull-message runtime abstraction. Pull mode is for queue configuration and admin orchestration.
+  <strong>Good to know:</strong> this SDK currently does not provide a pull-message runtime abstraction. Pull mode is still configuration plus admin orchestration, whether you use the primary durable-object surface or the legacy queue surface.
 </div>
 
 ## Troubleshooting

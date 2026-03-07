@@ -1,7 +1,15 @@
 {
   "name": "better-cf",
-  "version": "1.0.0",
-  "description": "Type-safe Cloudflare Queue SDK and CLI",
+  "version": "0.2.2",
+  "description": "Functional, type-safe Cloudflare SDK suite for Durable Objects and Queues",
+  "keywords": [
+    "cloudflare",
+    "durable-objects",
+    "queues",
+    "workers",
+    "typescript",
+    "zod"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/imaxisXD/Better-Cf-Sdk"
@@ -25,6 +33,14 @@
     "./queue/internal": {
       "types": "./dist/queue/internal.d.ts",
       "default": "./dist/queue/internal.js"
+    },
+    "./durable-object": {
+      "types": "./dist/durable-object/index.d.ts",
+      "default": "./dist/durable-object/index.js"
+    },
+    "./durable-object/internal": {
+      "types": "./dist/durable-object/internal.d.ts",
+      "default": "./dist/durable-object/internal.js"
     },
     "./testing": {
       "types": "./dist/testing/index.d.ts",
@@ -60,12 +76,16 @@
     "release:publish": "npm run build && npm publish --access public --tag ${NPM_TAG:-latest}"
   },
   "dependencies": {
+    "@clack/prompts": "^0.10.1",
     "@iarna/toml": "^2.2.5",
     "chokidar": "^3.6.0",
     "commander": "^12.1.0",
     "jsonc-parser": "^3.3.1",
+    "magic-string": "^0.30.17",
+    "oxc-parser": "^0.81.0",
+    "package-manager-detector": "^0.2.11",
     "picocolors": "^1.1.1",
-    "ts-morph": "^27.0.2"
+    "tinyexec": "^0.3.2"
   },
   "peerDependencies": {
     "@cloudflare/workers-types": ">=4.20240117.0",

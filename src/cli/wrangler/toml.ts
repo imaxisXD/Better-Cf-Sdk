@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import MagicString from 'magic-string';
 import type { DiscoveryResult } from '../types.js';
 import { parseDurationMsStrict, parseDurationSecondsStrict } from './duration.js';
 
@@ -17,9 +18,13 @@ export function patchTomlConfig(filePath: string, discovery: DiscoveryResult): v
   const endIndex = content.indexOf(END_MARKER);
 
   if (startIndex >= 0 && endIndex > startIndex) {
-    const head = content.slice(0, startIndex + START_MARKER.length);
-    const tail = content.slice(endIndex);
-    content = `${head}\n${generatedSection}\n${tail}`;
+    const magic = new MagicString(content);
+    magic.overwrite(
+      startIndex + START_MARKER.length,
+      endIndex,
+      `\n${generatedSection}\n`
+    );
+    content = magic.toString();
   } else {
     content = `${content.trimEnd()}\n\n${START_MARKER}\n${generatedSection}\n${END_MARKER}\n`;
   }

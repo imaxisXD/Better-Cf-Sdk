@@ -1,6 +1,6 @@
 ---
 title: Why better-cf
-description: Why this SDK suite exists, why Queue SDK ships first in Alpha, and how the functional-style DX model guides the roadmap.
+description: Why this SDK suite exists and why the durable-object surface is now the primary functional-style API for Cloudflare stateful apps.
 ---
 
 ## Why This Suite Exists
@@ -37,17 +37,17 @@ The bar is set by SDKs and platforms like Convex, Vercel, Clerk, Upstash, and Ta
 
 ## Current Scope and Status
 
-- **Queue SDK**: Alpha and usable now
+- **Durable Object SDK (`better-cf/durable-object`)**: Alpha and the primary surface going forward
+- **Queue SDK (`better-cf/queue`)**: Alpha legacy surface for existing inline-consumer projects
 - **Workflow SDK**: Coming Soon
-- **Durable Objects SDK**: Coming Soon
 
-Queue SDK ships first because it solves high-frequency team pain today while establishing architecture patterns reused by future SDKs.
+The durable-object surface now carries the next-gen model for the suite: `schema.ts` declarations, external builders, generated `ctx.api`, and Cloudflare-native escape hatches when you need them.
 
 ## Design Principles
 
 ### Functional API shape first
 
-Prefer composable helpers (`createSDK`, `defineQueue`, `defineWorker`) over broad class surfaces and lifecycle-heavy wiring.
+Prefer composable helpers (`createSDK`, `defineDurableObject`, `defineQueue`, `defineWorker`) over broad class surfaces and lifecycle-heavy wiring.
 
 ### Typed by default
 

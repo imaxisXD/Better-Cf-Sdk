@@ -1,13 +1,13 @@
 ---
-title: Install Queue SDK and Tooling
-description: Install better-cf, Wrangler, and TypeScript prerequisites for Queue SDK development.
+title: Install better-cf and Tooling
+description: Install better-cf, Wrangler, and TypeScript for the primary durable-object surface and the legacy queue surface.
 ---
 
-Set up the minimum tooling needed to run Queue SDK locally and generate queue wiring.
+Set up the minimum tooling needed to run `better-cf/durable-object` locally and generate queue plus Durable Object wiring.
 
 ## What You Will Achieve
 
-- install runtime and dev dependencies required by Queue SDK
+- install runtime and dev dependencies required by better-cf
 - choose the right onboarding flow for an existing project or a new blank project
 - verify your local environment can run the local generation + dev workflow
 
@@ -50,7 +50,7 @@ Expected output:
 - `better-cf.config.ts` exists
 - `worker.ts` exists (if missing before)
 - `.better-cf/` exists
-- `wrangler.toml` exists or is updated for managed queue mapping
+- `wrangler.toml` exists or is updated for managed queue and Durable Object mapping
 
 ### Step 3: Verify Local Dev Loop
 
@@ -62,7 +62,7 @@ npm run dev
 
 Expected output:
 
-- queue scanning and generation runs
+- resource scanning and generation runs
 - `wrangler dev` starts after generation
 
 ## Path B: New Blank Project
@@ -84,12 +84,12 @@ Expected output:
 Optional package manager flags:
 
 ```bash
-npx better-cf create my-worker --use-pnpm
-npx better-cf create my-worker --use-bun
+npx better-cf create my-worker --package-manager pnpm
+npx better-cf create my-worker --package-manager bun
 ```
 
 <div class="dx-callout">
-  <strong>Good to know:</strong> queue definition files can live in any folder. Discovery is based on exported <code>defineQueue(...)</code> usage imported from <code>better-cf.config</code>, not folder name.
+  <strong>Good to know:</strong> resource files can live in any folder. Discovery is based on exported declarations and builders imported from <code>better-cf.config</code>, not folder name.
 </div>
 
 ## Troubleshooting
@@ -108,6 +108,6 @@ This is expected before creating your first exported `defineQueue(...)`.
 
 ## Next Steps
 
-- Build your first queue end-to-end in [First Queue Walkthrough](/guides/first-queue)
-- Run the fast path in [Quickstart](/getting-started)
+- Start with the primary surface in [Durable Object Quickstart](/durable-object/getting-started)
+- Use [Queue SDK Quickstart](/getting-started) only if you are staying on the legacy queue surface
 - Choose typing strategy in [Env Typing Modes](/guides/env-typing-modes)

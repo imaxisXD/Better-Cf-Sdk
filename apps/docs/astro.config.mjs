@@ -31,6 +31,36 @@ export default defineConfig({
           ]
         },
         {
+          label: 'Durable Object SDK',
+          items: [
+            {
+              label: 'Getting Started',
+              items: [
+                { label: 'Quickstart', link: '/durable-object/getting-started' },
+                { label: 'schema.ts Model', link: '/durable-object/schema-model' },
+                { label: 'Functions + ctx.api', link: '/durable-object/functions-and-ctx-api' }
+              ]
+            },
+            {
+              label: 'Guides',
+              items: [
+                { label: 'Queue + Durable Object Patterns', link: '/durable-object/queue-integration' },
+                { label: 'Alarms, Fetch, WebSockets', link: '/durable-object/alarms-fetch-websockets' },
+                { label: 'Identity + Migrations', link: '/durable-object/identity-migrations' },
+                { label: 'Testing', link: '/durable-object/testing' },
+                { label: 'Errors, Retries, Idempotency', link: '/durable-object/errors-and-retries' },
+                { label: 'Legacy Queue Migration', link: '/durable-object/migration-from-legacy-queue' }
+              ]
+            },
+            {
+              label: 'Reference',
+              items: [
+                { label: 'Coverage Matrix', link: '/durable-object/coverage-matrix' }
+              ]
+            }
+          ]
+        },
+        {
           label: 'Queue SDK',
           items: [
             {

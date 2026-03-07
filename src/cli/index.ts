@@ -1,36 +1,29 @@
 import { Command } from 'commander';
-import {
-  queueConsumerHttpAddCommand,
-  queueConsumerHttpRemoveCommand,
-  queueConsumerWorkerAddCommand,
-  queueConsumerWorkerRemoveCommand,
-  queueCreateCommand,
-  queueDeleteCommand,
-  queueInfoCommand,
-  queueListCommand,
-  queuePauseCommand,
-  queuePurgeCommand,
-  queueResumeCommand,
-  queueUpdateCommand,
-  subscriptionCreateCommand,
-  subscriptionDeleteCommand,
-  subscriptionGetCommand,
-  subscriptionListCommand,
-  subscriptionUpdateCommand
-} from './commands/admin.js';
+import { renderBanner, shouldRenderBanner } from './banner.js';
+import { createCommand, type PackageManager } from './commands/create.js';
 import { deployCommand } from './commands/deploy.js';
 import { devCommand } from './commands/dev.js';
 import { generateCommand } from './commands/generate.js';
 import { initCommand } from './commands/init.js';
-import { createCommand, type PackageManager } from './commands/create.js';
-import { CliError } from './errors.js';
-import { toCliError } from './errors.js';
+import {
+  registryAddCommand,
+  registryCacheClearCommand,
+  registryInfoCommand,
+  registryListCommand
+} from './commands/registry.js';
+import { treeCommand } from './commands/tree.js';
+import { CliError, toCliError } from './errors.js';
 import { logger } from './logger.js';
 
 export async function run(argv = process.argv.slice(2)): Promise<void> {
+  if (shouldRenderBanner(argv)) {
+    renderBanner();
+  }
+
   const program = new Command();
 
-  program.name('better-cf').description('better-cf queue SDK CLI').version('0.2.1');
+  program.name('better-cf').description('better-cf queue SDK CLI').version('0.2.2');
+  program.exitOverride();
 
   program
     .command('create [project-directory]')
@@ -38,10 +31,11 @@ export async function run(argv = process.argv.slice(2)): Promise<void> {
     .option('-y, --yes', 'Use defaults and skip prompts')
     .option('--no-install', 'Skip dependency installation')
     .option('--force', 'Allow creating in a non-empty directory')
-    .option('--use-npm', 'Use npm to install dependencies')
-    .option('--use-pnpm', 'Use pnpm to install dependencies')
-    .option('--use-yarn', 'Use yarn to install dependencies')
-    .option('--use-bun', 'Use bun to install dependencies')
+    .option(
+      '--package-manager <manager>',
+      'Select package manager (npm, pnpm, yarn, bun)',
+      parsePackageManagerOption
+    )
     .action(
       async (
         projectDirectory: string | undefined,
@@ -49,18 +43,14 @@ export async function run(argv = process.argv.slice(2)): Promise<void> {
           yes: boolean;
           install: boolean;
           force: boolean;
-          useNpm?: boolean;
-          usePnpm?: boolean;
-          useYarn?: boolean;
-          useBun?: boolean;
+          packageManager?: PackageManager;
         }
       ) => {
-        const packageManager = resolveCreatePackageManager(options);
         await createCommand(projectDirectory, {
           yes: options.yes,
           install: options.install,
           force: options.force,
-          packageManager
+          packageManager: options.packageManager
         });
       }
     );
@@ -87,266 +77,63 @@ export async function run(argv = process.argv.slice(2)): Promise<void> {
     await deployCommand();
   });
 
-  program.command('queue:list').description('List queues').action(async () => {
-    await queueListCommand();
-  });
+  const registryCommand = program.command('registry').description('Manage better-cf template registry entries');
+
+  registryCommand
+    .command('list')
+    .description('List available registry entries')
+    .option('--refresh', 'Bypass cache and refresh from remote registry')
+    .action(async (options: { refresh?: boolean }) => {
+      await registryListCommand({ refresh: options.refresh });
+    });
+
+  registryCommand
+    .command('info <id>')
+    .description('Show details for a registry entry')
+    .option('--refresh', 'Bypass cache and refresh from remote registry')
+    .action(async (id: string, options: { refresh?: boolean }) => {
+      await registryInfoCommand(id, { refresh: options.refresh });
+    });
+
+  registryCommand
+    .command('add <id> [target]')
+    .description('Install registry entry files into target directory')
+    .option('--refresh', 'Bypass cache and refresh from remote registry')
+    .action(async (id: string, target: string | undefined, options: { refresh?: boolean }) => {
+      await registryAddCommand(id, target, { refresh: options.refresh });
+    });
+
+  registryCommand
+    .command('cache')
+    .description('Manage local registry cache')
+    .command('clear')
+    .description('Clear local registry cache data')
+    .action(async () => {
+      await registryCacheClearCommand();
+    });
 
   program
-    .command('queue:create')
-    .description('Create a queue')
-    .requiredOption('--name <name>', 'Queue name')
-    .option('--delivery-delay-secs <seconds>', 'Default delivery delay in seconds', parseNumberOption)
-    .option(
-      '--message-retention-period-secs <seconds>',
-      'Message retention period in seconds',
-      parseNumberOption
-    )
+    .command('tree [path]')
+    .description('Print a file tree using system tree with fallback rendering')
+    .option('-d, --depth <depth>', 'Maximum tree depth', parseNumberOption)
+    .option('-i, --ignore <patterns>', 'Comma-separated ignore names (for example node_modules,.git)')
+    .option('--json', 'Output as JSON')
     .action(
-      async (options: {
-        name: string;
-        deliveryDelaySecs?: number;
-        messageRetentionPeriodSecs?: number;
-      }) => {
-        await queueCreateCommand(options.name, {
-          deliveryDelaySecs: options.deliveryDelaySecs,
-          messageRetentionPeriodSecs: options.messageRetentionPeriodSecs
+      async (
+        maybePath: string | undefined,
+        options: {
+          depth?: number;
+          ignore?: string;
+          json?: boolean;
+        }
+      ) => {
+        await treeCommand(maybePath, {
+          depth: options.depth,
+          ignore: parseIgnoreOption(options.ignore),
+          json: options.json ?? false
         });
       }
     );
-  program
-    .command('queue:update')
-    .description('Update a queue')
-    .requiredOption('--name <name>', 'Queue name')
-    .option('--delivery-delay-secs <seconds>', 'Default delivery delay in seconds', parseNumberOption)
-    .option(
-      '--message-retention-period-secs <seconds>',
-      'Message retention period in seconds',
-      parseNumberOption
-    )
-    .action(
-      async (options: {
-        name: string;
-        deliveryDelaySecs?: number;
-        messageRetentionPeriodSecs?: number;
-      }) => {
-        await queueUpdateCommand(options.name, {
-          deliveryDelaySecs: options.deliveryDelaySecs,
-          messageRetentionPeriodSecs: options.messageRetentionPeriodSecs
-        });
-      }
-    );
-
-  program
-    .command('queue:delete')
-    .description('Delete a queue')
-    .requiredOption('--name <name>', 'Queue name')
-    .action(async (options: { name: string }) => {
-      await queueDeleteCommand(options.name);
-    });
-
-  program
-    .command('queue:info')
-    .description('Describe a queue')
-    .requiredOption('--name <name>', 'Queue name')
-    .action(async (options: { name: string }) => {
-      await queueInfoCommand(options.name);
-    });
-
-  program
-    .command('queue:pause')
-    .description('Pause queue delivery')
-    .requiredOption('--name <name>', 'Queue name')
-    .action(async (options: { name: string }) => {
-      await queuePauseCommand(options.name);
-    });
-
-  program
-    .command('queue:resume')
-    .description('Resume queue delivery')
-    .requiredOption('--name <name>', 'Queue name')
-    .action(async (options: { name: string }) => {
-      await queueResumeCommand(options.name);
-    });
-
-  program
-    .command('queue:purge')
-    .description('Purge queue messages')
-    .requiredOption('--name <name>', 'Queue name')
-    .action(async (options: { name: string }) => {
-      await queuePurgeCommand(options.name);
-    });
-
-  program
-    .command('queue:consumer:http:add')
-    .description('Add HTTP pull consumer for a queue')
-    .requiredOption('--queue <queue>', 'Queue name')
-    .option('--batch-size <size>', 'Batch size', parseNumberOption)
-    .option('--message-retries <retries>', 'Message retries', parseNumberOption)
-    .option('--dead-letter-queue <queue>', 'Dead letter queue name')
-    .option('--visibility-timeout-secs <seconds>', 'Visibility timeout for pull consumer', parseNumberOption)
-    .option('--retry-delay-secs <seconds>', 'Retry delay in seconds', parseNumberOption)
-    .action(
-      async (options: {
-        queue: string;
-        batchSize?: number;
-        messageRetries?: number;
-        deadLetterQueue?: string;
-        visibilityTimeoutSecs?: number;
-        retryDelaySecs?: number;
-      }) => {
-        await queueConsumerHttpAddCommand(options.queue, {
-          batchSize: options.batchSize,
-          messageRetries: options.messageRetries,
-          deadLetterQueue: options.deadLetterQueue,
-          visibilityTimeoutSecs: options.visibilityTimeoutSecs,
-          retryDelaySecs: options.retryDelaySecs
-        });
-      }
-    );
-  program
-    .command('queue:consumer:http:remove')
-    .description('Remove HTTP pull consumer for a queue')
-    .requiredOption('--queue <queue>', 'Queue name')
-    .action(async (options: { queue: string }) => {
-      await queueConsumerHttpRemoveCommand(options.queue);
-    });
-
-  program
-    .command('queue:consumer:worker:add')
-    .description('Add worker consumer for a queue')
-    .requiredOption('--queue <queue>', 'Queue name')
-    .requiredOption('--script <script>', 'Worker script name')
-    .option('--batch-size <size>', 'Batch size', parseNumberOption)
-    .option('--batch-timeout <seconds>', 'Batch timeout in seconds', parseNumberOption)
-    .option('--message-retries <retries>', 'Message retries', parseNumberOption)
-    .option('--dead-letter-queue <queue>', 'Dead letter queue name')
-    .option('--max-concurrency <count>', 'Max consumer concurrency', parseNumberOption)
-    .option('--retry-delay-secs <seconds>', 'Retry delay in seconds', parseNumberOption)
-    .action(
-      async (options: {
-        queue: string;
-        script: string;
-        batchSize?: number;
-        batchTimeout?: number;
-        messageRetries?: number;
-        deadLetterQueue?: string;
-        maxConcurrency?: number;
-        retryDelaySecs?: number;
-      }) => {
-        await queueConsumerWorkerAddCommand(
-          options.queue,
-          options.script,
-          {
-            batchSize: options.batchSize,
-            batchTimeout: options.batchTimeout,
-            messageRetries: options.messageRetries,
-            deadLetterQueue: options.deadLetterQueue,
-            maxConcurrency: options.maxConcurrency,
-            retryDelaySecs: options.retryDelaySecs
-          }
-        );
-      }
-    );
-  program
-    .command('queue:consumer:worker:remove')
-    .description('Remove worker consumer for a queue')
-    .requiredOption('--queue <queue>', 'Queue name')
-    .requiredOption('--script <script>', 'Worker script name')
-    .action(async (options: { queue: string; script: string }) => {
-      await queueConsumerWorkerRemoveCommand(options.queue, options.script);
-    });
-  program
-    .command('subscription:list')
-    .description('List queue subscriptions')
-    .requiredOption('--queue <queue>', 'Queue name')
-    .option('--page <page>', 'Page number', parseNumberOption)
-    .option('--per-page <count>', 'Results per page', parseNumberOption)
-    .option('--json', 'JSON output')
-    .action(async (options: { queue: string; page?: number; perPage?: number; json?: boolean }) => {
-      await subscriptionListCommand(
-        options.queue,
-        { page: options.page, perPage: options.perPage, json: options.json }
-      );
-    });
-
-  program
-    .command('subscription:create')
-    .description('Create queue subscription')
-    .requiredOption('--queue <queue>', 'Queue name')
-    .requiredOption('--source <source>', 'Source id (same as queue name in most setups)')
-    .requiredOption('--events <events>', 'Event list (for example "message.acked")')
-    .option('--name <name>', 'Subscription name')
-    .option('--enabled <enabled>', 'Subscription enabled state (true/false)', parseBooleanOption)
-    .option('--model-name <modelName>', 'AI model name (for AI gateway subscriptions)')
-    .option('--worker-name <workerName>', 'Worker destination name')
-    .option('--workflow-name <workflowName>', 'Workflow destination name')
-    .action(
-      async (options: {
-        queue: string;
-        source: string;
-        events: string;
-        name?: string;
-        enabled?: boolean;
-        modelName?: string;
-        workerName?: string;
-        workflowName?: string;
-      }) => {
-        await subscriptionCreateCommand(options.queue, {
-          source: options.source,
-          events: options.events,
-          name: options.name,
-          enabled: options.enabled,
-          modelName: options.modelName,
-          workerName: options.workerName,
-          workflowName: options.workflowName
-        });
-      }
-    );
-  program
-    .command('subscription:get')
-    .description('Get queue subscription')
-    .requiredOption('--queue <queue>', 'Queue name')
-    .requiredOption('--id <id>', 'Subscription ID')
-    .option('--json', 'JSON output')
-    .action(async (options: { queue: string; id: string; json?: boolean }) => {
-      await subscriptionGetCommand(options.queue, options.id, { json: options.json });
-    });
-
-  program
-    .command('subscription:update')
-    .description('Update queue subscription destination')
-    .requiredOption('--queue <queue>', 'Queue name')
-    .requiredOption('--id <id>', 'Subscription ID')
-    .option('--name <name>', 'Subscription name')
-    .option('--events <events>', 'Event list')
-    .option('--enabled <enabled>', 'Subscription enabled state (true/false)', parseBooleanOption)
-    .option('--json', 'JSON output')
-    .action(
-      async (options: {
-        queue: string;
-        id: string;
-        name?: string;
-        events?: string;
-        enabled?: boolean;
-        json?: boolean;
-      }) => {
-        await subscriptionUpdateCommand(options.queue, options.id, {
-          name: options.name,
-          events: options.events,
-          enabled: options.enabled,
-          json: options.json
-        });
-      }
-    );
-  program
-    .command('subscription:delete')
-    .description('Delete queue subscription')
-    .requiredOption('--queue <queue>', 'Queue name')
-    .requiredOption('--id <id>', 'Subscription ID')
-    .option('--force', 'Skip confirmation where supported')
-    .action(async (options: { queue: string; id: string; force?: boolean }) => {
-      await subscriptionDeleteCommand(options.queue, options.id, { force: options.force });
-    });
 
   try {
     await program.parseAsync(argv, { from: 'user' });
@@ -377,50 +164,27 @@ function parseNumberOption(value: string): number {
   return parsed;
 }
 
-function parseBooleanOption(value: string): boolean {
-  const normalized = value.toLowerCase();
-  if (normalized === 'true') {
-    return true;
+function parsePackageManagerOption(value: string): PackageManager {
+  const normalized = value.trim().toLowerCase();
+  if (normalized === 'npm' || normalized === 'pnpm' || normalized === 'yarn' || normalized === 'bun') {
+    return normalized;
   }
-  if (normalized === 'false') {
-    return false;
-  }
+
   throw new CliError({
     code: 'INVALID_CLI_OPTION',
-    summary: `Invalid boolean option: ${value}.`,
-    details: 'Expected true or false.',
-    hint: 'Use --enabled true or --enabled false.'
+    summary: `Invalid package manager option: ${value}.`,
+    details: 'Expected one of npm, pnpm, yarn, or bun.',
+    hint: 'Use --package-manager pnpm (or npm/yarn/bun).'
   });
 }
 
-function resolveCreatePackageManager(options: {
-  useNpm?: boolean;
-  usePnpm?: boolean;
-  useYarn?: boolean;
-  useBun?: boolean;
-}): PackageManager | undefined {
-  const selected: PackageManager[] = [];
-
-  if (options.useNpm) {
-    selected.push('npm');
-  }
-  if (options.usePnpm) {
-    selected.push('pnpm');
-  }
-  if (options.useYarn) {
-    selected.push('yarn');
-  }
-  if (options.useBun) {
-    selected.push('bun');
+function parseIgnoreOption(value: string | undefined): string[] {
+  if (!value) {
+    return [];
   }
 
-  if (selected.length > 1) {
-    throw new CliError({
-      code: 'INVALID_CLI_OPTION',
-      summary: 'Conflicting package manager flags.',
-      details: 'Use only one of --use-npm, --use-pnpm, --use-yarn, or --use-bun.'
-    });
-  }
-
-  return selected[0];
+  return value
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0);
 }

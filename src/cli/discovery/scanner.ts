@@ -1,6 +1,17 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { Node, Project, SyntaxKind, type CallExpression, type ObjectLiteralExpression } from 'ts-morph';
+import type {
+  BindingPattern,
+  CallExpression,
+  Expression,
+  ExportDefaultDeclaration,
+  ExportNamedDeclaration,
+  ObjectExpression,
+  ObjectProperty,
+  Program,
+  VariableDeclaration
+} from '@oxc-project/types';
+import { parseSync } from 'oxc-parser';
 import { deriveBindingName, deriveQueueName, makeImportName } from './naming.js';
 import type {
   CliConfig,
@@ -32,73 +43,65 @@ const DEFINE_QUEUE_HELPERS = new Set(['defineQueue', 'defineQueues']);
 export async function scanQueues(config: CliConfig): Promise<DiscoveryResult> {
   const diagnostics: DiscoveryDiagnostic[] = [];
   const candidates = collectSourceFiles(config.rootDir, config.ignore);
-
-  const project = createProject(config.rootDir);
   const queues: DiscoveredQueue[] = [];
 
   for (const absolutePath of candidates) {
     try {
-      const sourceFile = project.addSourceFileAtPath(absolutePath);
-      const localDefineQueueNames = getDefineQueueLocalNames(sourceFile);
-      if (localDefineQueueNames.size === 0) {
-        project.removeSourceFile(sourceFile);
+      const source = fs.readFileSync(absolutePath, 'utf8');
+      const parsed = parseSync(absolutePath, source, {
+        lang: absolutePath.endsWith('.tsx') ? 'tsx' : 'ts',
+        sourceType: 'module'
+      });
+
+      if (parsed.errors.length > 0) {
+        diagnostics.push({
+          level: 'error',
+          code: 'SCANNER_FILE_ERROR',
+          message: `Failed to parse ${absolutePath}: ${parsed.errors[0]?.message ?? 'unknown parser error'}`,
+          filePath: path.relative(config.rootDir, absolutePath)
+        });
         continue;
       }
 
-      for (const declaration of sourceFile.getVariableDeclarations()) {
-        const variableStatement = declaration.getVariableStatement();
-        if (!variableStatement || !variableStatement.isExported()) {
-          continue;
-        }
-
-        const call = declaration.getInitializerIfKind(SyntaxKind.CallExpression);
-        if (!call || !isDefineQueueCall(call, localDefineQueueNames)) {
-          continue;
-        }
-
-        const exportName = declaration.getName();
-        const queueName = deriveQueueName(exportName);
-        const extracted = extractQueueConfig(call, absolutePath, diagnostics, config.rootDir);
-
-        queues.push({
-          exportName,
-          queueName,
-          bindingName: deriveBindingName(queueName),
-          filePath: path.relative(config.rootDir, absolutePath),
-          absoluteFilePath: absolutePath,
-          isDefaultExport: false,
-          importName: makeImportName(queueName, false, exportName),
-          config: extracted
-        });
+      const program = parsed.program;
+      const localDefineQueueNames = getDefineQueueLocalNames(program);
+      if (localDefineQueueNames.size === 0) {
+        continue;
       }
 
-      for (const exportAssignment of sourceFile.getExportAssignments()) {
-        if (exportAssignment.isExportEquals()) {
+      const variableInitMap = collectVariableInitializers(program);
+
+      for (const statement of program.body) {
+        if (statement.type !== 'ExportNamedDeclaration') {
           continue;
         }
 
-        const call = resolveCallExpressionFromExportAssignment(exportAssignment.getExpression());
-        if (!call || !isDefineQueueCall(call, localDefineQueueNames)) {
-          continue;
-        }
-
-        const basename = path.basename(absolutePath, path.extname(absolutePath));
-        const queueName = deriveQueueName(basename);
-        const extracted = extractQueueConfig(call, absolutePath, diagnostics, config.rootDir);
-
-        queues.push({
-          exportName: 'default',
-          queueName,
-          bindingName: deriveBindingName(queueName),
-          filePath: path.relative(config.rootDir, absolutePath),
-          absoluteFilePath: absolutePath,
-          isDefaultExport: true,
-          importName: makeImportName(queueName, true, 'default'),
-          config: extracted
-        });
+        discoverNamedExportsFromStatement(
+          statement,
+          localDefineQueueNames,
+          variableInitMap,
+          absolutePath,
+          config.rootDir,
+          queues,
+          diagnostics
+        );
       }
 
-      project.removeSourceFile(sourceFile);
+      for (const statement of program.body) {
+        if (statement.type !== 'ExportDefaultDeclaration') {
+          continue;
+        }
+
+        discoverDefaultExportFromStatement(
+          statement,
+          localDefineQueueNames,
+          variableInitMap,
+          absolutePath,
+          config.rootDir,
+          queues,
+          diagnostics
+        );
+      }
     } catch (error) {
       diagnostics.push({
         level: 'error',
@@ -125,23 +128,150 @@ export async function scanQueues(config: CliConfig): Promise<DiscoveryResult> {
   };
 }
 
-function createProject(rootDir: string): Project {
-  const tsConfigPath = path.join(rootDir, 'tsconfig.json');
-  if (fs.existsSync(tsConfigPath)) {
-    return new Project({
-      tsConfigFilePath: tsConfigPath,
-      skipAddingFilesFromTsConfig: true
-    });
+function discoverNamedExportsFromStatement(
+  statement: ExportNamedDeclaration,
+  localDefineQueueNames: Set<string>,
+  variableInitMap: Map<string, Expression>,
+  absolutePath: string,
+  rootDir: string,
+  queues: DiscoveredQueue[],
+  diagnostics: DiscoveryDiagnostic[]
+): void {
+  if (!statement.declaration || statement.declaration.type !== 'VariableDeclaration') {
+    return;
   }
 
-  return new Project({
-    compilerOptions: {
-      target: 99,
-      module: 99,
-      moduleResolution: 99,
-      allowJs: false
+  for (const declaration of statement.declaration.declarations) {
+    const exportName = getBindingName(declaration.id);
+    if (!exportName || !declaration.init) {
+      continue;
     }
+
+    const call = resolveCallExpressionFromExpression(declaration.init, variableInitMap);
+    if (!call || !isDefineQueueCall(call, localDefineQueueNames)) {
+      continue;
+    }
+
+    const queueName = deriveQueueName(exportName);
+    const extracted = extractQueueConfig(call, absolutePath, diagnostics, rootDir);
+
+    queues.push({
+      exportName,
+      queueName,
+      bindingName: deriveBindingName(queueName),
+      filePath: path.relative(rootDir, absolutePath),
+      absoluteFilePath: absolutePath,
+      isDefaultExport: false,
+      importName: makeImportName(queueName, false, exportName),
+      config: extracted
+    });
+  }
+}
+
+function discoverDefaultExportFromStatement(
+  statement: ExportDefaultDeclaration,
+  localDefineQueueNames: Set<string>,
+  variableInitMap: Map<string, Expression>,
+  absolutePath: string,
+  rootDir: string,
+  queues: DiscoveredQueue[],
+  diagnostics: DiscoveryDiagnostic[]
+): void {
+  const declaration = statement.declaration;
+  if (
+    declaration.type !== 'Identifier' &&
+    declaration.type !== 'CallExpression' &&
+    declaration.type !== 'ParenthesizedExpression'
+  ) {
+    return;
+  }
+
+  const call = resolveCallExpressionFromExpression(declaration, variableInitMap);
+  if (!call || !isDefineQueueCall(call, localDefineQueueNames)) {
+    return;
+  }
+
+  const basename = path.basename(absolutePath, path.extname(absolutePath));
+  const queueName = deriveQueueName(basename);
+  const extracted = extractQueueConfig(call, absolutePath, diagnostics, rootDir);
+
+  queues.push({
+    exportName: 'default',
+    queueName,
+    bindingName: deriveBindingName(queueName),
+    filePath: path.relative(rootDir, absolutePath),
+    absoluteFilePath: absolutePath,
+    isDefaultExport: true,
+    importName: makeImportName(queueName, true, 'default'),
+    config: extracted
   });
+}
+
+function collectVariableInitializers(program: Program): Map<string, Expression> {
+  const map = new Map<string, Expression>();
+
+  for (const statement of program.body) {
+    if (statement.type === 'VariableDeclaration') {
+      collectVariableDeclarationInitializers(statement, map);
+      continue;
+    }
+
+    if (statement.type === 'ExportNamedDeclaration' && statement.declaration?.type === 'VariableDeclaration') {
+      collectVariableDeclarationInitializers(statement.declaration, map);
+    }
+  }
+
+  return map;
+}
+
+function collectVariableDeclarationInitializers(
+  declaration: VariableDeclaration,
+  target: Map<string, Expression>
+): void {
+  for (const variable of declaration.declarations) {
+    const name = getBindingName(variable.id);
+    if (!name || !variable.init) {
+      continue;
+    }
+
+    target.set(name, variable.init);
+  }
+}
+
+function resolveCallExpressionFromExpression(
+  expression: Expression,
+  variableInitMap: Map<string, Expression>,
+  visited = new Set<string>()
+): CallExpression | undefined {
+  const unwrapped = unwrapExpression(expression);
+
+  if (unwrapped.type === 'CallExpression') {
+    return unwrapped;
+  }
+
+  if (unwrapped.type !== 'Identifier') {
+    return undefined;
+  }
+
+  if (visited.has(unwrapped.name)) {
+    return undefined;
+  }
+
+  const initializer = variableInitMap.get(unwrapped.name);
+  if (!initializer) {
+    return undefined;
+  }
+
+  visited.add(unwrapped.name);
+  return resolveCallExpressionFromExpression(initializer, variableInitMap, visited);
+}
+
+function unwrapExpression(expression: Expression): Expression {
+  if (expression.type === 'ParenthesizedExpression') {
+    return unwrapExpression(expression.expression);
+  }
+
+  return expression;
 }
 
 function collectSourceFiles(rootDir: string, ignore: string[]): string[] {
@@ -166,11 +296,13 @@ function collectSourceFiles(rootDir: string, ignore: string[]): string[] {
         continue;
       }
 
-      if (entry.name.endsWith('.ts') || entry.name.endsWith('.tsx')) {
-        const content = fs.readFileSync(absolutePath, 'utf8');
-        if (content.includes('defineQueue') || content.includes('defineQueues')) {
-          files.push(absolutePath);
-        }
+      if (!entry.name.endsWith('.ts') && !entry.name.endsWith('.tsx')) {
+        continue;
+      }
+
+      const content = fs.readFileSync(absolutePath, 'utf8');
+      if (content.includes('defineQueue') || content.includes('defineQueues')) {
+        files.push(absolutePath);
       }
     }
   }
@@ -179,53 +311,61 @@ function collectSourceFiles(rootDir: string, ignore: string[]): string[] {
   return files;
 }
 
-function getDefineQueueLocalNames(sourceFile: import('ts-morph').SourceFile): Set<string> {
+function getDefineQueueLocalNames(program: Program): Set<string> {
   const names = new Set<string>();
 
-  for (const importDecl of sourceFile.getImportDeclarations()) {
-    const specifier = importDecl.getModuleSpecifierValue();
-    if (!specifier.includes('better-cf.config')) {
+  for (const statement of program.body) {
+    if (statement.type !== 'ImportDeclaration') {
       continue;
     }
 
-    for (const namedImport of importDecl.getNamedImports()) {
-      if (!DEFINE_QUEUE_HELPERS.has(namedImport.getName())) {
+    if (!statement.source.value.includes('better-cf.config')) {
+      continue;
+    }
+
+    for (const specifier of statement.specifiers) {
+      if (specifier.type !== 'ImportSpecifier') {
         continue;
       }
-      names.add(namedImport.getAliasNode()?.getText() ?? namedImport.getName());
+
+      const importedName = getModuleExportName(specifier.imported);
+      if (!importedName || !DEFINE_QUEUE_HELPERS.has(importedName)) {
+        continue;
+      }
+
+      names.add(specifier.local.name);
     }
   }
 
   return names;
 }
 
+function getModuleExportName(node: { type: string; name?: string; value?: unknown }): string | undefined {
+  if (node.type === 'Identifier') {
+    return node.name;
+  }
+
+  if (node.type === 'Literal' && typeof node.value === 'string') {
+    return node.value;
+  }
+
+  return undefined;
+}
+
 function isDefineQueueCall(call: CallExpression, localNames: Set<string>): boolean {
-  const expression = call.getExpression();
-  if (expression.getKind() !== SyntaxKind.Identifier) {
+  const callee = unwrapExpression(call.callee);
+  if (callee.type !== 'Identifier') {
     return false;
   }
 
-  return localNames.has(expression.getText());
+  return localNames.has(callee.name);
 }
 
-function resolveCallExpressionFromExportAssignment(
-  expression: import('ts-morph').Expression
-): CallExpression | undefined {
-  if (expression.getKind() === SyntaxKind.CallExpression) {
-    return expression as CallExpression;
+function getBindingName(binding: BindingPattern): string | undefined {
+  if (binding.type === 'Identifier') {
+    return binding.name;
   }
-
-  if (expression.getKind() !== SyntaxKind.Identifier) {
-    return undefined;
-  }
-
-  const symbol = expression.getSymbol();
-  const declaration = symbol?.getValueDeclaration();
-  if (!declaration || !Node.isVariableDeclaration(declaration)) {
-    return undefined;
-  }
-
-  return declaration.getInitializerIfKind(SyntaxKind.CallExpression) ?? undefined;
+  return undefined;
 }
 
 function extractQueueConfig(
@@ -234,8 +374,8 @@ function extractQueueConfig(
   diagnostics: DiscoveryDiagnostic[],
   rootDir: string
 ): ExtractedQueueConfig {
-  const firstArg = call.getArguments()[0];
-  if (!firstArg || firstArg.getKind() !== SyntaxKind.ObjectLiteralExpression) {
+  const firstArg = call.arguments[0];
+  if (!firstArg || firstArg.type !== 'ObjectExpression') {
     return {
       hasHandler: false,
       hasBatchHandler: false,
@@ -243,7 +383,7 @@ function extractQueueConfig(
     };
   }
 
-  const objectLiteral = firstArg as ObjectLiteralExpression;
+  const objectLiteral = firstArg;
   const hasHandler = hasProperty(objectLiteral, 'handler');
   const hasBatchHandler = hasProperty(objectLiteral, 'batchHandler');
 
@@ -298,23 +438,22 @@ function extractQueueConfig(
 
   let isMultiJob = false;
   if (!hasHandler && !hasBatchHandler) {
-    for (const property of objectLiteral.getProperties()) {
-      if (!Node.isPropertyAssignment(property)) {
+    for (const property of objectLiteral.properties) {
+      if (property.type !== 'Property') {
         continue;
       }
 
-      const propertyName = property.getName();
-      if (RESERVED_KEYS.has(propertyName)) {
+      const propertyName = getPropertyName(property);
+      if (!propertyName || RESERVED_KEYS.has(propertyName)) {
         continue;
       }
 
-      const initializer = property.getInitializer();
-      if (!initializer || initializer.getKind() !== SyntaxKind.ObjectLiteralExpression) {
+      const initializer = unwrapExpression(property.value);
+      if (initializer.type !== 'ObjectExpression') {
         continue;
       }
 
-      const jobObject = initializer as ObjectLiteralExpression;
-      if (hasProperty(jobObject, 'args') && hasProperty(jobObject, 'handler')) {
+      if (hasProperty(initializer, 'args') && hasProperty(initializer, 'handler')) {
         isMultiJob = true;
         break;
       }
@@ -359,24 +498,24 @@ function extractQueueConfig(
   };
 }
 
-function hasProperty(objectLiteral: ObjectLiteralExpression, name: string): boolean {
-  return objectLiteral.getProperties().some((property) => {
-    return Node.isPropertyAssignment(property) && property.getName() === name;
+function hasProperty(objectLiteral: ObjectExpression, name: string): boolean {
+  return objectLiteral.properties.some((property) => {
+    return property.type === 'Property' && getPropertyName(property) === name;
   });
 }
 
 function getObjectLiteralProperty(
-  objectLiteral: ObjectLiteralExpression,
+  objectLiteral: ObjectExpression,
   name: string
-): ObjectLiteralExpression | undefined {
-  for (const property of objectLiteral.getProperties()) {
-    if (!Node.isPropertyAssignment(property) || property.getName() !== name) {
+): ObjectExpression | undefined {
+  for (const property of objectLiteral.properties) {
+    if (property.type !== 'Property' || getPropertyName(property) !== name) {
       continue;
     }
 
-    const initializer = property.getInitializer();
-    if (initializer && initializer.getKind() === SyntaxKind.ObjectLiteralExpression) {
-      return initializer as ObjectLiteralExpression;
+    const initializer = unwrapExpression(property.value);
+    if (initializer.type === 'ObjectExpression') {
+      return initializer;
     }
   }
 
@@ -384,25 +523,18 @@ function getObjectLiteralProperty(
 }
 
 function readNumberProperty(
-  objectLiteral: ObjectLiteralExpression,
+  objectLiteral: ObjectExpression,
   name: string,
   diagnostics: DiscoveryDiagnostic[],
   absolutePath: string,
   rootDir: string
 ): number | undefined {
-  const prop = objectLiteral.getProperties().find((property) => {
-    return Node.isPropertyAssignment(property) && property.getName() === name;
-  });
-  if (!prop || !Node.isPropertyAssignment(prop)) {
-    return undefined;
-  }
-
-  const initializer = prop.getInitializer();
+  const initializer = getPropertyInitializer(objectLiteral, name);
   if (!initializer) {
     return undefined;
   }
 
-  if (initializer.getKind() !== SyntaxKind.NumericLiteral) {
+  if (initializer.type !== 'Literal' || typeof initializer.value !== 'number') {
     diagnostics.push({
       level: 'warning',
       code: 'NON_STATIC_CONFIG',
@@ -412,29 +544,22 @@ function readNumberProperty(
     return undefined;
   }
 
-  return Number(initializer.getText());
+  return initializer.value;
 }
 
 function readStringProperty(
-  objectLiteral: ObjectLiteralExpression,
+  objectLiteral: ObjectExpression,
   name: string,
   diagnostics: DiscoveryDiagnostic[],
   absolutePath: string,
   rootDir: string
 ): string | undefined {
-  const prop = objectLiteral.getProperties().find((property) => {
-    return Node.isPropertyAssignment(property) && property.getName() === name;
-  });
-  if (!prop || !Node.isPropertyAssignment(prop)) {
-    return undefined;
-  }
-
-  const initializer = prop.getInitializer();
+  const initializer = getPropertyInitializer(objectLiteral, name);
   if (!initializer) {
     return undefined;
   }
 
-  if (initializer.getKind() !== SyntaxKind.StringLiteral) {
+  if (initializer.type !== 'Literal' || typeof initializer.value !== 'string') {
     diagnostics.push({
       level: 'warning',
       code: 'NON_STATIC_CONFIG',
@@ -444,34 +569,27 @@ function readStringProperty(
     return undefined;
   }
 
-  return initializer.getText().slice(1, -1);
+  return readRawStringLiteral(initializer.raw, initializer.value);
 }
 
 function readNumberOrStringProperty(
-  objectLiteral: ObjectLiteralExpression,
+  objectLiteral: ObjectExpression,
   name: string,
   diagnostics: DiscoveryDiagnostic[],
   absolutePath: string,
   rootDir: string
 ): number | string | undefined {
-  const prop = objectLiteral.getProperties().find((property) => {
-    return Node.isPropertyAssignment(property) && property.getName() === name;
-  });
-  if (!prop || !Node.isPropertyAssignment(prop)) {
-    return undefined;
-  }
-
-  const initializer = prop.getInitializer();
+  const initializer = getPropertyInitializer(objectLiteral, name);
   if (!initializer) {
     return undefined;
   }
 
-  if (initializer.getKind() === SyntaxKind.NumericLiteral) {
-    return Number(initializer.getText());
+  if (initializer.type === 'Literal' && typeof initializer.value === 'number') {
+    return initializer.value;
   }
 
-  if (initializer.getKind() === SyntaxKind.StringLiteral) {
-    return initializer.getText().slice(1, -1);
+  if (initializer.type === 'Literal' && typeof initializer.value === 'string') {
+    return readRawStringLiteral(initializer.raw, initializer.value);
   }
 
   diagnostics.push({
@@ -485,7 +603,7 @@ function readNumberOrStringProperty(
 }
 
 function readConsumerConfig(
-  objectLiteral: ObjectLiteralExpression,
+  objectLiteral: ObjectExpression,
   diagnostics: DiscoveryDiagnostic[],
   absolutePath: string,
   rootDir: string
@@ -522,6 +640,47 @@ function readConsumerConfig(
     type: typeValue,
     visibilityTimeout
   };
+}
+
+function getPropertyInitializer(objectLiteral: ObjectExpression, name: string): Expression | undefined {
+  for (const property of objectLiteral.properties) {
+    if (property.type !== 'Property' || getPropertyName(property) !== name) {
+      continue;
+    }
+
+    return unwrapExpression(property.value);
+  }
+
+  return undefined;
+}
+
+function getPropertyName(property: ObjectProperty): string | undefined {
+  if (property.computed) {
+    return undefined;
+  }
+
+  if (property.key.type === 'Identifier') {
+    return property.key.name;
+  }
+
+  if (property.key.type === 'Literal' && typeof property.key.value === 'string') {
+    return property.key.value;
+  }
+
+  return undefined;
+}
+
+function readRawStringLiteral(raw: string | null, fallback: string): string {
+  if (!raw || raw.length < 2) {
+    return fallback;
+  }
+
+  const quote = raw[0];
+  if ((quote !== '\'' && quote !== '"' && quote !== '`') || raw[raw.length - 1] !== quote) {
+    return fallback;
+  }
+
+  return raw.slice(1, -1);
 }
 
 function addConflictDiagnostics(queues: DiscoveredQueue[], diagnostics: DiscoveryDiagnostic[]): void {

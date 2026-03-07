@@ -31,6 +31,11 @@ export interface DiscoveryDiagnostic {
   code:
     | 'QUEUE_NAME_CONFLICT'
     | 'BINDING_NAME_CONFLICT'
+    | 'DURABLE_OBJECT_NAME_CONFLICT'
+    | 'DURABLE_OBJECT_BINDING_CONFLICT'
+    | 'DURABLE_OBJECT_HOOK_CONFLICT'
+    | 'QUEUE_CONSUMER_CONFLICT'
+    | 'UNRESOLVED_RESOURCE_REFERENCE'
     | 'INVALID_HANDLER_MODE'
     | 'INVALID_PULL_MODE_HANDLER'
     | 'UNSUPPORTED_PULL_MULTIJOB'
@@ -54,10 +59,16 @@ export interface CliConfig {
   workerEntry?: string;
   legacyServiceWorker?: boolean;
   inferEnvTypes?: boolean;
+  registry?: {
+    url?: string;
+    cacheTtlHours?: number;
+    cacheDir?: string;
+  };
 }
 
 export interface GenerateResult {
   discovery: DiscoveryResult;
+  modernDiscovery?: import('./modern-types.js').ModernDiscoveryResult;
   generatedEntryPath: string;
   generatedTypesPath: string;
   wranglerConfigPath: string;

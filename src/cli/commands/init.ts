@@ -94,6 +94,11 @@ export const { defineQueue, defineQueues, defineWorker } = createSDK();
 export const betterCfConfig = {
   // workerEntry: 'worker.ts',
   // ignore: ['coverage'],
+  // registry: {
+  //   url: 'https://example.com/better-cf-registry.json',
+  //   cacheTtlHours: 24,
+  //   cacheDir: '.better-cf/cache',
+  // },
   legacyServiceWorker: false,
   inferEnvTypes: true,
 };

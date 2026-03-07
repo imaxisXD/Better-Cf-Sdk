@@ -11,7 +11,9 @@ const originalSidebar = Array.isArray(props.sidebar) ? props.sidebar : [];
 const groups = originalSidebar.filter((entry) => entry?.type === 'group');
 const groupByLabel = new Map(groups.map((entry) => [entry.label, entry]));
 
-const orderedLabels = suiteMode ? ['Suite', 'Queue SDK'] : ['Queue SDK', 'Suite'];
+const orderedLabels = suiteMode
+  ? ['Suite', 'Durable Object SDK', 'Queue SDK']
+  : ['Durable Object SDK', 'Queue SDK', 'Suite'];
 const orderedGroups = orderedLabels
   .map((label) => groupByLabel.get(label))
   .filter(Boolean);

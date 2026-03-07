@@ -8,33 +8,33 @@ This roadmap describes direction and prioritization, not release-date guarantees
 ## What You Will Achieve
 
 - understand current package maturity across the suite
-- see what Queue SDK Alpha is optimizing now
+- see what Durable Object SDK Alpha is optimizing now
 - understand how future namespaces are planned and constrained
 
 ## Before You Start
 
 - identify your current adoption stage (new build vs migration)
-- review current Queue SDK limits in [Limitations](/limitations)
+- review current Queue SDK legacy limits in [Limitations](/limitations)
 - align expectations with directional roadmap semantics
 
 ## Step 1: Read Current SDK Status
 
-- `better-cf/queue`: **Alpha**
+- `better-cf/durable-object`: **Alpha**
+- `better-cf/queue`: **Alpha (Legacy Surface)**
 - `better-cf/workflow`: **Coming Soon**
-- `better-cf/durable-object`: **Coming Soon**
 
 Expected output:
 
 - current production adoption decisions are aligned to maturity stage
 
-## Step 2: Understand Queue SDK Alpha Focus
+## Step 2: Understand Current Focus
 
 Current focus areas:
 
-- stabilize queue DX and scanner reliability
-- expand docs with source-backed production patterns
+- stabilize durable-object DX and scanner reliability
+- expand docs around `schema.ts`, `ctx.api`, and queue + DO composition
 - keep generated wiring predictable across supported Wrangler configs
-- improve migration ergonomics from manual queue setups
+- preserve legacy queue projects while moving new work to the durable-object surface
 
 Expected output:
 
@@ -42,21 +42,21 @@ Expected output:
 
 ## Step 3: Understand Planned Progression
 
-- Queue SDK remains Alpha while core ergonomics and edge cases are hardened
+- Durable Object SDK remains Alpha while core ergonomics and edge cases are hardened
+- Queue SDK remains supported, but the legacy inline-consumer model is no longer the primary API direction
 - progression target is Beta, then stable criteria
-- reserved namespaces indicate intended product direction, not near-term release timing
+- reserved namespaces still indicate intended product direction, not near-term release timing
 
 Reserved namespaces:
 
 - `better-cf/workflow`
-- `better-cf/durable-object`
 
 Expected output:
 
 - roadmap expectations are realistic and non-speculative
 
 <div class="dx-callout">
-  <strong>Good to know:</strong> reserved names signal architectural intent only. They are not delivery commitments by themselves.
+  <strong>Good to know:</strong> the durable-object namespace is now shipped. Workflow remains directional only.
 </div>
 
 ## Troubleshooting
@@ -67,7 +67,7 @@ Use roadmap for directional planning and gate release dependencies on shipped mi
 
 ### Alpha concerns block adoption entirely
 
-Adopt Queue SDK for bounded workflows first and keep native Cloudflare fallbacks for unsupported edges.
+Adopt the Durable Object SDK for bounded stateful workflows first and keep native Cloudflare fallbacks for unsupported edges.
 
 ### Future namespace confusion
 

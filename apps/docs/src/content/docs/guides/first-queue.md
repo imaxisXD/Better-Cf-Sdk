@@ -1,9 +1,11 @@
 ---
-title: Build Your First Queue
-description: Define one queue, wire one worker, and run the local generation loop end-to-end.
+title: Build Your First Queue (Legacy Surface)
+description: Define one queue, wire one worker, and run the local generation loop end-to-end on the original queue-only API.
 ---
 
-Ship one working queue flow with typed payload validation and generated Cloudflare wiring.
+Ship one working queue flow with typed payload validation and generated Cloudflare wiring on the legacy `better-cf/queue` surface.
+
+For new projects, prefer [Durable Object Quickstart](/durable-object/getting-started).
 
 ## What You Will Achieve
 

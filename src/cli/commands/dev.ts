@@ -1,4 +1,3 @@
-import type { ChildProcess } from 'node:child_process';
 import { CliError } from '../errors.js';
 import { logger } from '../logger.js';
 import { spawnCommand } from '../process.js';
@@ -21,7 +20,7 @@ export async function devCommand(options: DevOptions, rootDir = process.cwd()): 
     });
   }
 
-  let wranglerProcess: ChildProcess | null = null;
+  let wranglerProcess: ReturnType<typeof spawnCommand> | null = null;
   let isRebuilding = false;
 
   const buildAndRestart = async (reason: string): Promise<void> => {
@@ -39,8 +38,10 @@ export async function devCommand(options: DevOptions, rootDir = process.cwd()): 
       }
 
       wranglerProcess = spawnCommand('npx', ['wrangler', 'dev', '--port', options.port], rootDir);
-      wranglerProcess.once('error', (error) => {
-        logger.error(`Failed to start wrangler dev: ${error.message}`);
+      void wranglerProcess.then((output) => {
+        if (output.exitCode !== 0 && output.exitCode !== undefined) {
+          logger.error(`wrangler dev exited with code ${output.exitCode}`);
+        }
       });
     } finally {
       isRebuilding = false;

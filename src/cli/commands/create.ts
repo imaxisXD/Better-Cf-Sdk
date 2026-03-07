@@ -1,7 +1,16 @@
-import fs from 'node:fs';
+import fs from 'node:fs/promises';
 import path from 'node:path';
-import { createInterface } from 'node:readline/promises';
-import { stdin as input, stdout as output } from 'node:process';
+import {
+  confirm,
+  intro,
+  isCancel,
+  outro,
+  select,
+  spinner,
+  text
+} from '@clack/prompts';
+import { resolveCommand } from 'package-manager-detector/commands';
+import { detectSync, getUserAgent } from 'package-manager-detector/detect';
 import { initCommand } from './init.js';
 import { CliError } from '../errors.js';
 import { logger } from '../logger.js';
@@ -25,32 +34,8 @@ interface InstallPlan {
 
 const DEFAULT_PROJECT_DIR = 'better-cf-app';
 const PACKAGE_MANAGERS: PackageManager[] = ['npm', 'pnpm', 'yarn', 'bun'];
-const INSTALL_PLANS: Record<PackageManager, InstallPlan> = {
-  npm: {
-    command: 'npm',
-    runtimeArgs: ['install', 'better-cf', 'zod'],
-    devArgs: ['install', '-D', 'wrangler', '@cloudflare/workers-types', 'typescript'],
-    devRunCommand: 'npm run dev'
-  },
-  pnpm: {
-    command: 'pnpm',
-    runtimeArgs: ['add', 'better-cf', 'zod'],
-    devArgs: ['add', '-D', 'wrangler', '@cloudflare/workers-types', 'typescript'],
-    devRunCommand: 'pnpm dev'
-  },
-  yarn: {
-    command: 'yarn',
-    runtimeArgs: ['add', 'better-cf', 'zod'],
-    devArgs: ['add', '-D', 'wrangler', '@cloudflare/workers-types', 'typescript'],
-    devRunCommand: 'yarn dev'
-  },
-  bun: {
-    command: 'bun',
-    runtimeArgs: ['add', 'better-cf', 'zod'],
-    devArgs: ['add', '-d', 'wrangler', '@cloudflare/workers-types', 'typescript'],
-    devRunCommand: 'bun run dev'
-  }
-};
+const RUNTIME_DEPENDENCIES = ['better-cf', 'zod'];
+const DEV_DEPENDENCIES = ['wrangler', '@cloudflare/workers-types', 'typescript'];
 
 export async function createCommand(
   projectDirectoryArg: string | undefined,
@@ -59,103 +44,71 @@ export async function createCommand(
 ): Promise<void> {
   const isYes = options.yes ?? false;
   const shouldInstallByDefault = options.install ?? true;
-  const isInteractive = Boolean(input.isTTY && output.isTTY && !isYes);
+  const isInteractive = Boolean(process.stdin.isTTY && process.stdout.isTTY && !isYes);
 
-  const prompts = isInteractive ? createPrompts() : undefined;
-  try {
-    const projectDirectory = await resolveProjectDirectory(projectDirectoryArg, isYes, prompts);
-    const targetDir = path.resolve(rootDir, projectDirectory);
+  if (isInteractive) {
+    intro('Create a better-cf project');
+  }
 
-    ensureTargetDirectory(targetDir, options.force ?? false);
-    await initCommand(targetDir);
+  const projectDirectory = await resolveProjectDirectory(projectDirectoryArg, isYes, isInteractive);
+  const targetDir = path.resolve(rootDir, projectDirectory);
 
-    const detectedPackageManager = detectPackageManager(rootDir);
-    const packageManager =
-      options.packageManager ??
-      (prompts ? await prompts.selectPackageManager(detectedPackageManager) : detectedPackageManager);
+  await ensureTargetDirectory(targetDir, options.force ?? false);
+  await initCommand(targetDir);
 
-    const shouldInstall =
-      shouldInstallByDefault && (prompts ? await prompts.confirmInstall(true) : true);
+  const detectedPackageManager = detectPackageManager(rootDir);
+  const packageManager =
+    options.packageManager ??
+    (isInteractive ? await promptPackageManager(detectedPackageManager) : detectedPackageManager);
 
-    if (shouldInstall) {
-      await installDependencies(packageManager, targetDir);
-    }
+  const shouldInstall =
+    shouldInstallByDefault && (isInteractive ? await promptInstallConfirmation(true) : true);
 
-    const relativePath = path.relative(rootDir, targetDir) || '.';
-    const plan = INSTALL_PLANS[packageManager];
+  if (shouldInstall) {
+    await installDependencies(packageManager, targetDir, isInteractive);
+  }
 
-    logger.section('Project ready');
-    logger.item('path', targetDir);
-    if (relativePath !== '.') {
-      logger.item('cd', `cd ${relativePath}`);
-    }
-    if (!shouldInstall) {
-      logger.item('install', `${plan.command} ${plan.runtimeArgs.join(' ')}`);
-      logger.item('install (dev)', `${plan.command} ${plan.devArgs.join(' ')}`);
-    }
-    logger.item('dev', plan.devRunCommand);
-  } finally {
-    prompts?.close();
+  const relativePath = path.relative(rootDir, targetDir) || '.';
+  const plan = getInstallPlan(packageManager);
+
+  logger.section('Project ready');
+  logger.item('path', targetDir);
+  if (relativePath !== '.') {
+    logger.item('cd', `cd ${relativePath}`);
+  }
+  if (!shouldInstall) {
+    logger.item('install', `${plan.command} ${plan.runtimeArgs.join(' ')}`);
+    logger.item('install (dev)', `${plan.command} ${plan.devArgs.join(' ')}`);
+  }
+  logger.item('dev', plan.devRunCommand);
+
+  if (isInteractive) {
+    outro('Project scaffold complete.');
   }
 }
 
 export function detectPackageManager(rootDir = process.cwd()): PackageManager {
-  if (fs.existsSync(path.join(rootDir, 'pnpm-lock.yaml'))) {
-    return 'pnpm';
-  }
-  if (fs.existsSync(path.join(rootDir, 'yarn.lock'))) {
-    return 'yarn';
-  }
-  if (fs.existsSync(path.join(rootDir, 'bun.lock')) || fs.existsSync(path.join(rootDir, 'bun.lockb'))) {
-    return 'bun';
+  try {
+    const detected = detectSync({ cwd: rootDir });
+    if (detected && isSupportedPackageManager(detected.name)) {
+      return detected.name;
+    }
+  } catch {
+    // Fallback to user agent or npm below.
   }
 
-  const userAgent = process.env.npm_config_user_agent?.toLowerCase() ?? '';
-  if (userAgent.startsWith('pnpm')) {
-    return 'pnpm';
-  }
-  if (userAgent.startsWith('yarn')) {
-    return 'yarn';
-  }
-  if (userAgent.startsWith('bun')) {
-    return 'bun';
-  }
-  if (userAgent.startsWith('npm')) {
-    return 'npm';
+  const userAgent = getUserAgent();
+  if (userAgent && isSupportedPackageManager(userAgent)) {
+    return userAgent;
   }
 
   return 'npm';
 }
 
-function ensureTargetDirectory(targetDir: string, force: boolean): void {
-  if (!fs.existsSync(targetDir)) {
-    fs.mkdirSync(targetDir, { recursive: true });
-    return;
-  }
-
-  const stats = fs.statSync(targetDir);
-  if (!stats.isDirectory()) {
-    throw new CliError({
-      code: 'CREATE_TARGET_INVALID',
-      summary: `Target path exists and is not a directory: ${targetDir}.`,
-      hint: 'Choose a different project directory.'
-    });
-  }
-
-  const contents = fs.readdirSync(targetDir).filter((entry) => entry !== '.DS_Store');
-  if (contents.length > 0 && !force) {
-    throw new CliError({
-      code: 'CREATE_TARGET_NOT_EMPTY',
-      summary: `Target directory is not empty: ${targetDir}.`,
-      hint: 'Use --force to scaffold in a non-empty directory.'
-    });
-  }
-}
-
 async function resolveProjectDirectory(
   projectDirectoryArg: string | undefined,
   isYes: boolean,
-  prompts: ReturnType<typeof createPrompts> | undefined
+  isInteractive: boolean
 ): Promise<string> {
   if (projectDirectoryArg && projectDirectoryArg.trim().length > 0) {
     return projectDirectoryArg.trim();
@@ -165,7 +118,7 @@ async function resolveProjectDirectory(
     return DEFAULT_PROJECT_DIR;
   }
 
-  if (!prompts) {
+  if (!isInteractive) {
     throw new CliError({
       code: 'CREATE_TARGET_REQUIRED',
       summary: 'Project directory is required in non-interactive mode.',
@@ -173,15 +126,115 @@ async function resolveProjectDirectory(
     });
   }
 
-  return prompts.askProjectDirectory(DEFAULT_PROJECT_DIR);
+  const value = await text({
+    message: 'Project directory',
+    defaultValue: DEFAULT_PROJECT_DIR,
+    placeholder: DEFAULT_PROJECT_DIR,
+    validate(input) {
+      if (input.trim().length === 0) {
+        return 'Project directory cannot be empty.';
+      }
+      return undefined;
+    }
+  });
+
+  if (isCancel(value)) {
+    throw cancellationError();
+  }
+
+  return value.trim() || DEFAULT_PROJECT_DIR;
 }
 
-async function installDependencies(packageManager: PackageManager, targetDir: string): Promise<void> {
-  const plan = INSTALL_PLANS[packageManager];
+async function promptPackageManager(defaultValue: PackageManager): Promise<PackageManager> {
+  const response = await select<PackageManager>({
+    message: 'Select a package manager',
+    initialValue: defaultValue,
+    options: PACKAGE_MANAGERS.map((manager) => ({
+      value: manager,
+      label: manager,
+      hint: manager === defaultValue ? 'detected' : undefined
+    }))
+  });
+
+  if (isCancel(response)) {
+    throw cancellationError();
+  }
+
+  return response;
+}
+
+async function promptInstallConfirmation(defaultValue: boolean): Promise<boolean> {
+  const response = await confirm({
+    message: 'Install dependencies now?',
+    initialValue: defaultValue
+  });
+
+  if (isCancel(response)) {
+    throw cancellationError();
+  }
+
+  return response;
+}
+
+async function ensureTargetDirectory(targetDir: string, force: boolean): Promise<void> {
+  try {
+    const stats = await fs.stat(targetDir);
+    if (!stats.isDirectory()) {
+      throw new CliError({
+        code: 'CREATE_TARGET_INVALID',
+        summary: `Target path exists and is not a directory: ${targetDir}.`,
+        hint: 'Choose a different project directory.'
+      });
+    }
+
+    const contents = (await fs.readdir(targetDir)).filter((entry) => entry !== '.DS_Store');
+    if (contents.length > 0 && !force) {
+      throw new CliError({
+        code: 'CREATE_TARGET_NOT_EMPTY',
+        summary: `Target directory is not empty: ${targetDir}.`,
+        hint: 'Use --force to scaffold in a non-empty directory.'
+      });
+    }
+  } catch (error) {
+    if (
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      (error as { code?: string }).code === 'ENOENT'
+    ) {
+      await fs.mkdir(targetDir, { recursive: true });
+      return;
+    }
+
+    if (error instanceof CliError) {
+      throw error;
+    }
+
+    throw new CliError({
+      code: 'CREATE_TARGET_INVALID',
+      summary: `Failed to prepare target directory: ${targetDir}.`,
+      details: error instanceof Error ? error.message : String(error)
+    });
+  }
+}
+
+async function installDependencies(
+  packageManager: PackageManager,
+  targetDir: string,
+  isInteractive: boolean
+): Promise<void> {
+  const plan = getInstallPlan(packageManager);
   logger.section(`Installing dependencies with ${plan.command}`);
 
+  const installSpinner = isInteractive ? spinner() : undefined;
+
+  installSpinner?.start('Installing runtime dependencies');
   await runInstallCommand(plan.command, plan.runtimeArgs, targetDir);
+  installSpinner?.stop('Installed runtime dependencies');
+
+  installSpinner?.start('Installing dev dependencies');
   await runInstallCommand(plan.command, plan.devArgs, targetDir);
+  installSpinner?.stop('Installed dev dependencies');
 }
 
 async function runInstallCommand(
@@ -213,69 +266,36 @@ async function runInstallCommand(
   }
 }
 
-function createPrompts() {
-  const rl = createInterface({ input, output });
+function getInstallPlan(packageManager: PackageManager): InstallPlan {
+  const addCommand = resolveCommand(packageManager, 'add', []);
+  const runCommandPlan = resolveCommand(packageManager, 'run', ['dev']);
+
+  if (!addCommand || !runCommandPlan) {
+    throw new CliError({
+      code: 'PACKAGE_MANAGER_UNSUPPORTED',
+      summary: `Package manager is not supported: ${packageManager}.`,
+      hint: 'Use one of npm, pnpm, yarn, or bun.'
+    });
+  }
+
+  const devFlag = packageManager === 'bun' ? '-d' : '-D';
 
   return {
-    async askProjectDirectory(defaultValue: string): Promise<string> {
-      while (true) {
-        const raw = await rl.question(`Project directory (${defaultValue}): `);
-        const value = raw.trim() || defaultValue;
-        if (value.length > 0) {
-          return value;
-        }
-      }
-    },
-
-    async selectPackageManager(defaultValue: PackageManager): Promise<PackageManager> {
-      const defaultIndex = PACKAGE_MANAGERS.indexOf(defaultValue);
-      while (true) {
-        output.write('\nSelect a package manager:\n');
-        PACKAGE_MANAGERS.forEach((manager, index) => {
-          output.write(`  ${index + 1}) ${manager}${manager === defaultValue ? ' (default)' : ''}\n`);
-        });
-
-        const raw = await rl.question(`Package manager [${defaultIndex + 1}]: `);
-        const normalized = raw.trim().toLowerCase();
-        if (!normalized) {
-          return defaultValue;
-        }
-
-        if (PACKAGE_MANAGERS.includes(normalized as PackageManager)) {
-          return normalized as PackageManager;
-        }
-
-        const asNumber = Number(normalized);
-        if (Number.isInteger(asNumber) && asNumber >= 1 && asNumber <= PACKAGE_MANAGERS.length) {
-          return PACKAGE_MANAGERS[asNumber - 1];
-        }
-
-        logger.warn(`Unsupported package manager input: ${raw}`);
-      }
-    },
-
-    async confirmInstall(defaultValue: boolean): Promise<boolean> {
-      const hint = defaultValue ? 'Y/n' : 'y/N';
-      while (true) {
-        const raw = await rl.question(`Install dependencies now? (${hint}): `);
-        const normalized = raw.trim().toLowerCase();
-
-        if (!normalized) {
-          return defaultValue;
-        }
-        if (normalized === 'y' || normalized === 'yes') {
-          return true;
-        }
-        if (normalized === 'n' || normalized === 'no') {
-          return false;
-        }
-
-        logger.warn(`Unsupported confirmation input: ${raw}`);
-      }
-    },
-
-    close(): void {
-      rl.close();
-    }
+    command: packageManager,
+    runtimeArgs: [...addCommand.args, ...RUNTIME_DEPENDENCIES],
+    devArgs: [...addCommand.args, devFlag, ...DEV_DEPENDENCIES],
+    devRunCommand: `${runCommandPlan.command} ${runCommandPlan.args.join(' ')}`
   };
+}
+
+function isSupportedPackageManager(value: string): value is PackageManager {
+  return value === 'npm' || value === 'pnpm' || value === 'yarn' || value === 'bun';
+}
+
+function cancellationError(): CliError {
+  return new CliError({
+    code: 'USER_CANCELLED',
+    summary: 'Create command was cancelled by user.',
+    hint: 'Re-run `better-cf create` to start again.'
+  });
 }

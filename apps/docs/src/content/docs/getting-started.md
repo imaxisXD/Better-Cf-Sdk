@@ -1,9 +1,11 @@
 ---
-title: Queue SDK Quickstart
-description: Ship your first typed queue in minutes using generated wiring and local automation.
+title: Queue SDK Quickstart (Legacy Surface)
+description: Ship your first typed queue in minutes using the original inline-consumer queue API.
 ---
 
-Build one working queue consumer flow quickly, then branch into focused guides for production hardening.
+Build one working queue consumer flow quickly if you are staying on the legacy `better-cf/queue` surface.
+
+If you are starting fresh, use [Durable Object Quickstart](/durable-object/getting-started) instead.
 
 ## Choose Your Start Point
 
@@ -12,7 +14,7 @@ Build one working queue consumer flow quickly, then branch into focused guides f
 
 ## What You Will Achieve
 
-- initialize Queue SDK in your project
+- initialize the legacy Queue SDK in your project
 - define one typed queue and one worker entry
 - run local generation and deploy workflow
 

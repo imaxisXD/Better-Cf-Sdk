@@ -1,83 +1,52 @@
 ---
-title: Operate Queues with Admin CLI
-description: Use queue and subscription admin commands safely with better-cf Wrangler wrappers.
+title: Queue Admin CLI
+description: Use Wrangler for queue and subscription infrastructure administration with either the primary durable-object surface or the legacy queue surface.
 ---
 
-Use admin commands to manage queue resources and consumers without manually composing Wrangler subcommands.
+This guide explains how to manage Cloudflare Queues infrastructure now that `better-cf` focuses on SDK DX workflow commands instead of wrapping queue admin commands directly.
 
-## What You Will Achieve
+## What Changed
 
-- run queue lifecycle operations from one CLI surface
-- manage worker/http consumers and subscriptions with validated options
-- understand required flags and common failure modes
+`better-cf` no longer exposes queue/subscription admin wrappers.
+For queue infra operations, use Wrangler directly.
 
-## Before You Start
-
-- Wrangler installed and authenticated
-- queue names and script names prepared
-- read command surface in [CLI Command Reference](/reference/cli-reference)
-
-## Step 1: Run Queue Lifecycle Commands
+## Queue Lifecycle (Wrangler)
 
 ```bash
-better-cf queue:list
-better-cf queue:create --name email --delivery-delay-secs 10
-better-cf queue:update --name email --message-retention-period-secs 86400
-better-cf queue:info --name email
-better-cf queue:pause --name email
-better-cf queue:resume --name email
-better-cf queue:purge --name email
+wrangler queues list
+wrangler queues create email --delivery-delay-secs 10
+wrangler queues update email --message-retention-period-secs 86400
+wrangler queues info email
+wrangler queues pause-delivery email
+wrangler queues resume-delivery email
+wrangler queues purge email
 ```
 
-Expected output:
-
-- queue resources are listed/updated through Wrangler wrappers
-
-## Step 2: Manage Queue Consumers
+## Consumer Management (Wrangler)
 
 ```bash
-better-cf queue:consumer:http:add --queue email --visibility-timeout-secs 30 --message-retries 5
-better-cf queue:consumer:worker:add --queue email --script api-worker --batch-size 20 --max-concurrency 4
+wrangler queues consumer http add email --visibility-timeout-secs 30 --message-retries 5
+wrangler queues consumer worker add email api-worker --batch-size 20 --max-concurrency 4
+wrangler queues consumer http remove email
+wrangler queues consumer worker remove email api-worker
 ```
 
-Expected output:
-
-- consumer settings are applied to the target queue
-
-## Step 3: Manage Queue Subscriptions
+## Subscription Management (Wrangler)
 
 ```bash
-better-cf subscription:list --queue email --json
-better-cf subscription:create --queue email --source email --events message.acked --name email-sub
-better-cf subscription:get --queue email --id sub_123 --json
-better-cf subscription:update --queue email --id sub_123 --enabled false
-better-cf subscription:delete --queue email --id sub_123 --force
+wrangler queues subscription list email --json
+wrangler queues subscription create email --source email --events message.acked --name email-sub
+wrangler queues subscription get email --id sub_123 --json
+wrangler queues subscription update email --id sub_123 --enabled false
+wrangler queues subscription delete email --id sub_123 --force
 ```
 
-Expected output:
+## When to Use better-cf vs Wrangler
 
-- subscription lifecycle operations complete with structured output/errors
-
-<div class="dx-callout">
-  <strong>Good to know:</strong> command wrappers normalize errors into consistent fields such as <code>code</code>, <code>summary</code>, and optional <code>hint</code>.
-</div>
-
-## Troubleshooting
-
-### `WRANGLER_QUEUE_COMMAND_FAILED`
-
-Validate Wrangler auth/session and re-run the exact command with verified queue/script identifiers.
-
-### Invalid queue/subscription argument errors
-
-Check option values against Wrangler token constraints and required flag combinations.
-
-### Admin command changed wrong resource
-
-Confirm queue names and subscription IDs in command history before retrying updates/deletes.
+- Use `better-cf` for: `create`, `init`, `generate`, `dev`, `deploy`, registry/tree utilities, generated queue and Durable Object wiring.
+- Use Wrangler for: queue/subscription resource administration.
 
 ## Next Steps
 
-- Review full option matrix in [CLI Command Reference](/reference/cli-reference)
-- Tune queue behavior in [Retry + DLQ + Batch Tuning](/guides/retry-batch-tuning)
-- Resolve failures with [Error Reference](/reference/errors)
+- Review command matrix in [CLI Command Reference](/reference/cli-reference)
+- Understand generation loop internals in [Automation CLI](/guides/automation-cli)

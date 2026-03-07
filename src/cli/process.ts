@@ -1,4 +1,5 @@
-import { spawn } from 'node:child_process';
+import type { StdioOptions } from 'node:child_process';
+import { x } from 'tinyexec';
 
 export interface CommandOutput {
   code: number;
@@ -12,52 +13,47 @@ export function runCommand(
   cwd: string,
   stdio: 'inherit' | 'pipe' = 'inherit'
 ): Promise<number> {
-  return new Promise((resolve, reject) => {
-    const child = spawn(command, args, {
-      cwd,
-      stdio,
-      env: process.env
-    });
-
-    child.once('error', (error) => reject(error));
-    child.once('close', (code) => resolve(code ?? 0));
-  });
+  return Promise.resolve(
+    x(command, args, {
+      throwOnError: false,
+      nodeOptions: {
+        cwd,
+        stdio: toStdioOption(stdio),
+        env: process.env
+      }
+    })
+  ).then((result) => result.exitCode ?? 0);
 }
 
 export function runCommandCapture(command: string, args: string[], cwd: string): Promise<CommandOutput> {
-  return new Promise((resolve, reject) => {
-    const child = spawn(command, args, {
-      cwd,
-      stdio: 'pipe',
-      env: process.env
-    });
-
-    let stdout = '';
-    let stderr = '';
-
-    child.stdout?.on('data', (chunk) => {
-      stdout += chunk.toString();
-    });
-
-    child.stderr?.on('data', (chunk) => {
-      stderr += chunk.toString();
-    });
-
-    child.once('error', (error) => reject(error));
-    child.once('close', (code) => {
-      resolve({
-        code: code ?? 0,
-        stdout,
-        stderr
-      });
-    });
-  });
+  return Promise.resolve(
+    x(command, args, {
+      throwOnError: false,
+      nodeOptions: {
+        cwd,
+        stdio: 'pipe',
+        env: process.env
+      }
+    })
+  ).then((result) => ({
+    code: result.exitCode ?? 0,
+    stdout: result.stdout,
+    stderr: result.stderr
+  }));
 }
 
 export function spawnCommand(command: string, args: string[], cwd: string) {
-  return spawn(command, args, {
-    cwd,
-    stdio: 'inherit',
-    env: process.env
+  return x(command, args, {
+    throwOnError: false,
+    persist: true,
+    nodeOptions: {
+      cwd,
+      stdio: 'inherit',
+      env: process.env
+    }
   });
+}
+
+function toStdioOption(mode: 'inherit' | 'pipe'): StdioOptions {
+  return mode;
 }

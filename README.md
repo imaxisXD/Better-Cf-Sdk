@@ -1,17 +1,15 @@
 # better-cf
 
-Opinionated Cloudflare Queue SDK + automation CLI designed for modern developer experience.
+Functional, type-safe Cloudflare SDKs for Durable Objects and Queues.
 
-## Why better-cf
+## Canonical Imports
 
-`better-cf` keeps Cloudflare Queue primitives but improves day-to-day ergonomics:
+- Primary next-gen surface: `better-cf/durable-object`
+- Legacy queue surface: `better-cf/queue`
+- Testing helpers: `better-cf/testing`
+- CLI binary: `better-cf`
 
-- typed queue contracts from one place
-- less manual entry/config wiring
-- structured automation for local dev and codegen
-- predictable runtime and testing APIs
-
-## Quickstart (Existing Project)
+## Quickstart
 
 ```bash
 npm i better-cf zod
@@ -20,7 +18,7 @@ npx better-cf init
 npm run dev
 ```
 
-## Quickstart (New Project)
+Create a new worker:
 
 ```bash
 npx better-cf create my-worker
@@ -28,78 +26,132 @@ cd my-worker
 npm run dev
 ```
 
-Use a specific package manager during create:
+## Primary Surface: `better-cf/durable-object`
 
-```bash
-npx better-cf create my-worker --use-pnpm
-npx better-cf create my-worker --use-bun
-```
-
-## Canonical Imports
-
-- Queue runtime: `better-cf/queue`
-- Testing helpers: `better-cf/testing`
-- CLI binary: `better-cf`
-
-## Core Workflow
-
-`better-cf dev` continuously orchestrates:
-
-1. scan queue definitions
-2. validate config
-3. generate `.better-cf/entry.ts` and type files
-4. patch wrangler queue sections
-5. infer env types
-6. run/restart `wrangler dev`
-7. re-run on source/config changes
-
-One-shot mode:
-
-```bash
-better-cf generate
-```
-
-## Example Patterns
-
-### Single queue with typed payload
+Use `schema.ts` as the resource registry, keep runtime behavior in sibling files, and call everything through generated `ctx.api`.
 
 ```ts
-import { createSDK } from 'better-cf/queue';
+// better-cf.config.ts
+import { createSDK } from 'better-cf/durable-object';
+
+export const sdk = createSDK();
+export const defineWorker = sdk.defineWorker;
+```
+
+```ts
+// src/schema.ts
 import { z } from 'zod';
+import { sdk } from '../better-cf.config';
 
-type Env = { QUEUE_SIGNUP: Queue };
-const { defineQueue, defineWorker } = createSDK<Env>();
+export const room = sdk.defineDurableObject({
+  name: 'Room',
+  key: z.string(),
+  version: 1,
+  description: 'Chat room state.'
+});
 
-export const signupQueue = defineQueue({
-  message: z.object({ email: z.string().email() }),
-  process: async (ctx, msg) => {
-    console.log(ctx.message.id, msg.email);
-  },
+export const emailQueue = sdk.defineQueue({
+  description: 'Email fanout queue.',
+  args: z.object({
+    roomId: z.string(),
+    to: z.string().email(),
+    body: z.string()
+  }),
   retry: 3,
   retryDelay: '30s'
 });
+```
+
+```ts
+// src/room.ts
+import { z } from 'zod';
+import { room } from './schema';
+
+export const sendMessage = room.fn({
+  description: 'Append a room message.',
+  args: z.object({
+    body: z.string(),
+    author: z.string()
+  }),
+  returns: z.object({
+    ok: z.literal(true)
+  }),
+  handler: async ({ storage }, args) => {
+    const messages = ((await storage.get('messages')) as unknown[] | undefined) ?? [];
+    messages.push(args);
+    await storage.put('messages', messages);
+    return { ok: true };
+  }
+});
+```
+
+```ts
+// src/email-queue.ts
+import { emailQueue } from './schema';
+
+export const emailQueueConsumer = emailQueue.message({
+  description: 'Deliver one email message.',
+  handler: async (ctx, job) => {
+    await ctx.api.room.sendMessage(job.roomId, {
+      body: job.body,
+      author: 'system'
+    });
+  }
+});
+```
+
+```ts
+// worker.ts
+import { defineWorker } from './better-cf.config';
 
 export default defineWorker({
-  async fetch() {
+  async fetch(_request, ctx) {
+    await ctx.api.room.sendMessage('general', {
+      body: 'hello',
+      author: 'abhi'
+    });
+
+    await ctx.api.emailQueue.send({
+      roomId: 'general',
+      to: 'team@example.com',
+      body: 'New message'
+    });
+
     return new Response('ok');
   }
 });
 ```
 
-### Batch mode
+What the generator adds:
+
+- `.better-cf/entry.ts` with worker, queue, and Durable Object wiring
+- `.better-cf/types.d.ts` with `ctx.api` typing and JSDoc
+- Wrangler queue and `durable_objects` bindings
+- SQLite Durable Object migrations
+
+## Legacy Queue Surface
+
+`better-cf/queue` remains available for the original inline-consumer model.
 
 ```ts
-const auditQueue = defineQueue({
-  message: z.object({ action: z.string() }),
-  batch: { maxSize: 10, timeout: '30s', maxConcurrency: 2 },
-  processBatch: async (ctx, messages) => {
-    console.log(messages.length, ctx.batch.queue);
-    ctx.batch.ackAll();
+import { createSDK } from 'better-cf/queue';
+import { z } from 'zod';
+
+const { defineQueue } = createSDK();
+
+export const signupQueue = defineQueue({
+  args: z.object({ email: z.string().email() }),
+  handler: async (ctx, msg) => {
+    console.log(ctx.message.id, msg.email);
   }
 });
 ```
 
-### Queue unit testing
+Use this surface for existing projects. New projects should prefer `better-cf/durable-object`.
+
+## Testing
+
+Legacy inline queues:
 
 ```ts
 import { testQueue } from 'better-cf/testing';
@@ -112,35 +164,59 @@ const result = await testQueue(signupQueue, {
 expect(result.acked).toHaveLength(1);
 ```
 
-## Comparison with Cloudflare Queue Workflows
+Next-gen external consumers and durable functions:
 
-| Concern | Cloudflare path | better-cf path |
-|---|---|---|
-| Queue contract shape | Convention/custom runtime checks | `defineQueue({ message: z.object(...) })` |
-| Entry + config wiring | Manual exports + Wrangler maintenance | Generated entry + automated Wrangler patching |
-| Local dev orchestration | Team-managed scripts | One `better-cf dev` loop |
-| Queue test harness | Custom mocks/harnesses | `testQueue` helper |
+```ts
+import { testDurableFunction, testQueueConsumer } from 'better-cf/testing';
 
-Detailed comparison is being migrated to the separate docs repository.
+await testDurableFunction(sendMessage, {
+  env: {},
+  args: { body: 'hello', author: 'abhi' }
+});
 
-## Limitations
+await testQueueConsumer(emailQueue, emailQueueConsumer, {
+  env: {},
+  api: {
+    room: {
+      sendMessage: async () => ({ ok: true })
+    }
+  },
+  message: {
+    roomId: 'general',
+    to: 'team@example.com',
+    body: 'hello'
+  }
+});
+```
 
-### Not supported
+## Core Workflow
 
-- Pull-message runtime abstraction implementation
-- Queue metrics/dashboard abstraction
-- Dynamic runtime queue declaration
-- Unsupported remote queue local-dev parity modes
+`better-cf dev` continuously:
 
-### Known gaps
+1. scans declarations and external registrations
+2. validates config and ownership rules
+3. generates `.better-cf/entry.ts` and type files
+4. patches Wrangler queues, Durable Objects, and SQLite migrations
+5. infers env types
+6. runs or restarts `wrangler dev`
 
-- Non-literal config extraction can reduce static mapping fidelity
-- Legacy service-worker adapter is compatibility-oriented
-- Non-standard worker export patterns beyond documented variants are out of scope
+One-shot generation:
 
-Use native Cloudflare APIs directly where the SDK intentionally does not abstract.
+```bash
+better-cf generate
+```
+
+## Scope
+
+The next-gen surface intentionally stays thin over Cloudflare primitives:
+
+- typed Durable Object RPC methods, alarms, fetch, init, and WebSocket hibernation hooks
+- typed queue producers and external consumers
+- generated `ctx.api` clients and Wrangler wiring
+- raw escape hatches for native Durable Object namespace methods when needed
+
+Use native Cloudflare APIs directly when the SDK intentionally does not abstract an edge case yet.
 
 ## Docs
 
-Docs are being migrated to a separate Next.js application repository.
-During migration, legacy docs source may still exist under `apps/docs`, but it is no longer part of package CI/CD.
+The full docs live under `apps/docs`, including the new Durable Object section, coverage matrix, migration guide, and legacy queue docs.

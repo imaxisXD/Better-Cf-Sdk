@@ -1,23 +1,24 @@
 ---
 title: CLI Command Reference
-description: Command-by-command reference for better-cf queue workflow and admin operations.
+description: Command-by-command reference for better-cf SDK workflow utilities.
 ---
 
 Use this reference to look up exact `better-cf` command names, required flags, and common usage patterns.
 
 ## What You Will Achieve
 
-- find the right command for local development, deploy, or queue admin operations
-- use required flags correctly on first run
-- map command groups to queue lifecycle stages
+- scaffold a new project quickly
+- run queue plus Durable Object discovery and codegen reliably
+- iterate locally and deploy safely
+- manage template installs with the registry utility
+- inspect project structure with the tree utility
 
 ## Before You Start
 
 - `better-cf` installed in the current workspace (`npx better-cf ...` also works)
-- Wrangler installed and authenticated for admin operations
-- queue names and resource identifiers available
+- Wrangler installed and authenticated (for deploy and infra admin commands)
 
-## Step 1: Use Core Workflow Commands
+## Core Workflow Commands
 
 ### `better-cf create [project-directory]`
 
@@ -28,18 +29,14 @@ Options:
 - `-y, --yes`: accept defaults and skip interactive prompts
 - `--no-install`: scaffold project files without installing dependencies
 - `--force`: allow scaffolding in a non-empty target folder
-- `--use-npm`: install with npm
-- `--use-pnpm`: install with pnpm
-- `--use-yarn`: install with yarn
-- `--use-bun`: install with bun
+- `--package-manager <npm|pnpm|yarn|bun>`: select install tool
 
 Examples:
 
 ```bash
 better-cf create my-worker
 better-cf create my-worker --no-install
-better-cf create my-worker --use-pnpm
-better-cf create my-worker --use-bun
+better-cf create my-worker --package-manager pnpm
 better-cf create . --force
 ```
 
@@ -51,7 +48,7 @@ Initialize `better-cf` in the current project directory (in place).
 
 ### `better-cf generate`
 
-Scan queue exports and regenerate `.better-cf` output files.
+Scan declarations, builders, and worker entrypoints, then regenerate `.better-cf` output files.
 
 ### `better-cf dev`
 
@@ -67,80 +64,59 @@ Options:
 
 Run generation and deploy through Wrangler.
 
-## Step 2: Use Queue Lifecycle Commands
+## Registry Commands
 
-| Command | Required flags | Optional flags |
-|---|---|---|
-| `queue:list` | none | none |
-| `queue:create` | `--name <name>` | `--delivery-delay-secs <seconds>`, `--message-retention-period-secs <seconds>` |
-| `queue:update` | `--name <name>` | `--delivery-delay-secs <seconds>`, `--message-retention-period-secs <seconds>` |
-| `queue:delete` | `--name <name>` | none |
-| `queue:info` | `--name <name>` | none |
-| `queue:pause` | `--name <name>` | none |
-| `queue:resume` | `--name <name>` | none |
-| `queue:purge` | `--name <name>` | none |
+### `better-cf registry list`
 
-Example:
+List local/remote registry entries available for install.
 
-```bash
-better-cf queue:create --name email --delivery-delay-secs 10
-better-cf queue:update --name email --message-retention-period-secs 86400
-```
+### `better-cf registry info <id>`
 
-## Step 3: Use Consumer Management Commands
+Show entry details, generated files, and dependency hints.
 
-| Command | Required flags | Optional flags |
-|---|---|---|
-| `queue:consumer:http:add` | `--queue <queue>` | `--batch-size <size>`, `--message-retries <retries>`, `--dead-letter-queue <queue>`, `--visibility-timeout-secs <seconds>`, `--retry-delay-secs <seconds>` |
-| `queue:consumer:http:remove` | `--queue <queue>` | none |
-| `queue:consumer:worker:add` | `--queue <queue>`, `--script <script>` | `--batch-size <size>`, `--batch-timeout <seconds>`, `--message-retries <retries>`, `--dead-letter-queue <queue>`, `--max-concurrency <count>`, `--retry-delay-secs <seconds>` |
-| `queue:consumer:worker:remove` | `--queue <queue>`, `--script <script>` | none |
+### `better-cf registry add <id> [target]`
 
-Example:
+Install registry entry files into the target directory.
 
-```bash
-better-cf queue:consumer:http:add --queue email --visibility-timeout-secs 30 --message-retries 5
-better-cf queue:consumer:worker:add --queue email --script api-worker --batch-size 20 --max-concurrency 4
-```
+### `better-cf registry cache clear`
 
-## Step 4: Use Subscription Commands
+Clear cached remote registry metadata (`.better-cf/cache/registry.json` by default).
 
-| Command | Required flags | Optional flags |
-|---|---|---|
-| `subscription:list` | `--queue <queue>` | `--page <page>`, `--per-page <count>`, `--json` |
-| `subscription:create` | `--queue <queue>`, `--source <source>`, `--events <events>` | `--name <name>`, `--enabled <true|false>`, `--model-name <modelName>`, `--worker-name <workerName>`, `--workflow-name <workflowName>` |
-| `subscription:get` | `--queue <queue>`, `--id <id>` | `--json` |
-| `subscription:update` | `--queue <queue>`, `--id <id>` | `--name <name>`, `--events <events>`, `--enabled <true|false>`, `--json` |
-| `subscription:delete` | `--queue <queue>`, `--id <id>` | `--force` |
+## Tree Command
 
-Example:
+### `better-cf tree [path]`
+
+Print a project tree (uses system `tree` utility when available, with internal fallback).
+
+Options:
+
+- `-d, --depth <depth>`: maximum recursion depth
+- `-i, --ignore <patterns>`: comma-separated names to skip
+- `--json`: JSON output mode
+
+## Infra Admin Commands
+
+`better-cf` no longer wraps queue/subscription infra admin commands.
+Use Wrangler directly for these operations:
 
 ```bash
-better-cf subscription:list --queue email --json
-better-cf subscription:create --queue email --source email --events message.acked --name email-sub
-better-cf subscription:delete --queue email --id sub_123 --force
+wrangler queues list
+wrangler queues create email
+wrangler queues subscription list email --json
 ```
-
-<div class="dx-callout">
-  <strong>Good to know:</strong> numeric options are validated as non-negative integers. Invalid values fail fast with <code>INVALID_CLI_OPTION</code>.
-</div>
 
 ## Troubleshooting
 
 ### Invalid option value errors
 
-Use integer values for numeric flags and explicit `true|false` values for boolean flags.
-
-### Wrangler command wrapper failures
-
-Check Wrangler auth/session and ensure queue/subscription identifiers are valid.
+Use integer values for numeric flags and valid package manager values for `--package-manager`.
 
 ### Remote dev confusion
 
-`better-cf dev --remote` is intentionally blocked for queue local workflow.
+`better-cf dev --remote` is intentionally blocked for the managed local workflow.
 
 ## Next Steps
 
 - Understand automation behavior in [Automation CLI](/guides/automation-cli)
-- Manage resources safely with [Queue Admin CLI](/guides/queue-admin-cli)
+- Manage queue resources with [Queue Admin CLI](/guides/queue-admin-cli)
 - Debug command failures via [Error Reference](/reference/errors)
