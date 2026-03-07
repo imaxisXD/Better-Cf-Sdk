@@ -1,6 +1,6 @@
 # better-cf
 
-Functional, type-safe Cloudflare SDKs for Durable Objects and Queues.
+Opininated Functional, type-safe Cloudflare SDKs for Durable Objects and Queues.
 
 ## Canonical Imports
 

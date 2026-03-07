@@ -1,5 +1,11 @@
 # better-cf
 
+## 2.0.0
+
+### Major Changes
+
+- New alpha version of durable object
+
 ## 1.0.0
 
 ### Major Changes
